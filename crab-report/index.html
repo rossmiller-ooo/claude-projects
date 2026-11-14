@@ -119,7 +119,21 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:baseline}
 
 .windows{display:flex;flex-direction:column;gap:8px}
-.win{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:center;padding:10px;border:1.5px solid var(--line);border-radius:8px}
+.win{border:1.5px solid var(--line);border-radius:8px}
+.win summary{list-style:none;cursor:pointer;padding:10px;border-radius:8px}
+.win summary::-webkit-details-marker{display:none}
+.win .row{display:grid;grid-template-columns:52px 1fr 18px;gap:12px;align-items:center}
+.win .chev{color:var(--ink2);font-size:1.1rem;transition:transform .15s}
+.win[open] .chev{transform:rotate(90deg)}
+.why{padding:2px 12px 12px}
+.why .f{display:grid;grid-template-columns:62px 1fr 46px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.93rem}
+.why .f b{font:700 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
+.why .f .pts{text-align:right;font:600 .9rem var(--f-data);font-variant-numeric:tabular-nums;color:var(--ink2)}
+.why .sum{font-size:.88rem;color:var(--ink2);padding-top:6px;border-top:1px solid var(--line)}
+button.day{font:inherit;color:inherit;background:none;cursor:pointer}
+button.day[aria-expanded="true"]{border-color:var(--ink);background:var(--water)}
+#dayWhy{margin-top:8px;border:1.5px solid var(--line);border-radius:8px;padding-top:8px}
+#dayWhy .hd{padding:0 12px 6px;font-weight:600}
 .win .sc{font:700 1.5rem/1 var(--f-data);text-align:center;border-radius:8px;padding:9px 0}
 .win .t{font-weight:600}
 .win .n{font-size:.9rem;color:var(--ink2)}
@@ -221,7 +235,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
       <div class="grid" id="inst"></div>
 
       <div class="card"><h2>Best times to go</h2><div class="windows" id="windows"></div>
-        <div class="lbl" style="margin:14px 0 8px">Next five days — best score each day</div><div class="days" id="days"></div></div>
+        <div class="lbl" style="margin:14px 0 8px">Next five days — best score each day</div><div class="days" id="days"></div><div id="dayWhy" hidden></div><p class="fine" style="margin-top:8px">Tap any time or day to see why it scored that way.</p></div>
 
       <div class="card"><h2>Tide &amp; crabbing score, next 48 hours</h2>
         <div class="chartbox"><svg id="tideChart" viewBox="0 0 720 250" role="img" aria-label="Tide height and crabbing score for the next 48 hours"></svg></div>
@@ -515,6 +529,23 @@ function bestWindows(site,now,hours,max){
     while(at(b)&&at(b).score>=c.score-8&&b-c.t<3*H)b+=H;
     return{...c,from:Math.max(a,now-(now%H?0:0)),to:b}});
 }
+function explain(c,site){
+  const td=c.tide,P=c.parts,rows=[],pts=(p,w)=>Math.round(p*w)+"/"+w;
+  if(td){const r=Math.abs(td.rate)*(site.current||1),sl=(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t);
+    let x=td.toSlack<=.75?sl+". Gear stays put.":td.rising&&(td.next.t-c.t)<=2*H?"Last of the incoming. High at "+fmtTime(td.next.t)+".":r>1?"Running hard, "+td.range.toFixed(1)+" ft swing. Gear rolls.":r>.55?"Moderate current, "+(td.rising?"incoming":"outgoing")+".":"Gentle "+(td.rising?"incoming":"outgoing")+" flow.";
+    if(td.h<1)x+=" Very low water.";
+    rows.push([part3(P.pT),"Tide",x,pts(P.pT,42)])}
+  if(c.wave!=null)rows.push([part3(P.pS),"Swell",c.wave.toFixed(0)+" ft outside, about "+c.eff.toFixed(0)+" ft here."+(c.eff<2.5?" Calm.":c.eff<4.5?" Some surge.":" Rough."),pts(P.pS,28)]);
+  if(c.windEff!=null)rows.push([part3(P.pW),"Wind",Math.round(c.w.wind)+" mph, gusts "+Math.round(nz(c.w.gust,c.w.wind))+"."+(c.windEff<8?" Light.":c.windEff<16?" Breezy.":" Hard to cast."),pts(P.pW,20)]);
+  rows.push([c.day>.5?"fair":"good","Light",c.day>.5?"Daylight. Crabs sit deeper.":"Low light. Crabs move shallow.",pts(P.pL,10)]);
+  if(c.runoff>.05)rows.push(["bad","Rain",c.r72.toFixed(1)+" in over 3 days. Fresh water in the bay.","−"+Math.round(c.runoff*30)]);
+  let cap="";
+  if(!c.season.open)cap="Season closed, so the score is 0.";
+  else if(c.flags.includes("surf"))cap="Surf this big is unsafe from shore. Score capped at 18.";
+  else if(c.flags.includes("wind"))cap="Wind this strong caps the score at 22.";
+  else if(c.eff!=null&&c.eff>=6)cap="Swell over 6 ft at the water caps the score at 38.";
+  return'<div class="why">'+rows.map(r=>'<div class="f"><b class="t-'+r[0]+'">'+r[1]+"</b><span>"+r[2]+'</span><span class="pts">'+r[3]+"</span></div>").join("")+(cap?'<div class="sum">'+cap+"</div>":"")+"</div>";
+}
 function whyText(c,site){
   if(!c.season.open)return"Dungeness season is closed here. It reopens "+fmtDate(c.season.nextOpen)+".";
   const bits=[];
@@ -591,14 +622,21 @@ function renderAlerts(site,c){
   loadAlerts(site).then(al=>{if(site.id!==current||!$("nws"))return;
     $("nws").innerHTML=al.map(p=>'<div class="alert '+(/Severe|Extreme/.test(p.severity)||/warning/i.test(p.event)?"bad":"fair")+'" style="margin-top:8px"><div><b>'+esc(p.event)+".</b> <span>"+esc(p.headline||"")+" (National Weather Service)</span></div></div>").join("")});
 }
+let dayConds=[];
+document.addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(!b)return;const was=b.getAttribute("aria-expanded")==="true",c=dayConds[+b.dataset.day],site=siteById(current);
+  document.querySelectorAll("[data-day]").forEach(x=>x.setAttribute("aria-expanded","false"));
+  if(was||!c){$("dayWhy").hidden=true;return}
+  b.setAttribute("aria-expanded","true");const g=grade(c.score);
+  $("dayWhy").hidden=false;$("dayWhy").innerHTML='<div class="hd">'+fmtDay(c.t)+" "+fmtTime(c.t)+' · <span class="t-'+g.c+'">'+c.score+" "+g.w+"</span></div>"+explain(c,site)});
 function renderWindows(site,now){
   const ws=bestWindows(site,now,72,4);
   $("windows").innerHTML=ws.length?ws.map(w=>{const g=grade(w.score),td=w.tide;
-    return'<div class="win"><div class="sc b-'+g.c+'">'+w.score+'</div><div><div class="t">'+fmtDay(w.from,now)+" "+fmtTime(w.from)+" – "+fmtTime(w.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" ("+td.near.v.toFixed(1)+" ft) · swell "+(w.wave==null?"–":w.wave.toFixed(0)+" ft")+" · wind "+(w.w.wind==null?"–":Math.round(w.w.wind)+" mph")+"</div></div></div>"}).join("")
+    return'<details class="win"><summary><div class="row"><div class="sc b-'+g.c+'">'+w.score+'</div><div><div class="t">'+fmtDay(w.from,now)+" "+fmtTime(w.from)+" – "+fmtTime(w.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" ("+td.near.v.toFixed(1)+" ft) · swell "+(w.wave==null?"–":w.wave.toFixed(0)+" ft")+" · wind "+(w.w.wind==null?"–":Math.round(w.w.wind)+" mph")+'</div></div><span class="chev" aria-hidden="true">›</span></div></summary>'+explain(w,site)+"</details>"}).join("")
     :'<p class="empty">'+(seasonInfo(site,now).open?"No decent windows in the next three days. Check the other spots or wait for the swell and wind to lie down.":"Season is closed.")+"</p>";
   const days=[];const d0=Math.floor(now/864e5)*864e5;
   for(let d=0;d<5;d++){const hs=hoursAhead(site,d0+d*864e5,24).filter(c=>c.tide&&c.t>=now-H&&!(site.dayOnly&&c.day<.5));if(!hs.length)continue;const hh=hs.filter(c=>{const h=new Date(c.t).getUTCHours();return h>=5&&h<=21});if(!hh.length)continue;const b=hh.reduce((a,c)=>c.score>a.score?c:a);days.push(b)}
-  $("days").innerHTML=days.map(b=>{const g=grade(b.score);return'<div class="day"><div class="lbl">'+fmtDay(b.t,now)+'</div><div class="bar"><i style="height:'+Math.max(6,b.score)+"%;background:var(--"+g.c+')"></i></div><div class="s t-'+g.c+'">'+b.score+'</div><div class="n">'+fmtTime(b.t)+"</div></div>"}).join("");
+  dayConds=days;$("dayWhy").hidden=true;
+  $("days").innerHTML=days.map((b,i)=>{const g=grade(b.score);return'<button type="button" class="day" data-day="'+i+'" aria-expanded="false"><div class="lbl">'+(fmtDay(b.t,now)==="Today"?"Today":DOW[new Date(b.t).getUTCDay()])+'</div><div class="bar"><i style="height:'+Math.max(6,b.score)+"%;background:var(--"+g.c+')"></i></div><div class="s t-'+g.c+'">'+b.score+'</div><div class="n">'+fmtTime(b.t)+"</div></button>"}).join("");
 }
 function renderChart(site,now,sel){
   const W=720,Hh=250,L=38,R=12,T=22,B=30,t0=Math.floor(now/H)*H-3*H,t1=t0+51*H;
@@ -826,7 +864,7 @@ async function boot(force){
 $("refresh").addEventListener("click",()=>{toast("Refreshing…");boot(true)});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();fillSpotSelect();setWhenNow();renderLog();boot(false);
-setInterval(()=>{if(!document.hidden&&!viewOffset&&DATA.loadedAt)renderToday()},5*6e4);
+setInterval(()=>{if(!document.hidden&&!viewOffset&&DATA.loadedAt&&!document.querySelector('.win[open],[data-day][aria-expanded="true"]'))renderToday()},5*6e4);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&DATA.loadedAt&&pacNow()-DATA.loadedAt>45*6e4)boot(false)});
 </script>
 </body>
