@@ -808,12 +808,8 @@ function drawSky(site,t,alpha){
       const az=(Math.atan2(Math.sin(ha),Math.cos(ha)*Math.sin(lat)-Math.tan(dec)*Math.cos(lat))/R+180+360)%360;
       return{x:((az-90+360)%360)/360*960,y:252-alt*2.62,alt,c:st[2]||"#ffffff"}});
     const up=pts.filter(q=>q.alt>3);if(up.length*2<pts.length)return;
-    cx.globalAlpha=alpha*.55;cx.strokeStyle="#cfe0f2";cx.lineWidth=1.4;cx.beginPath();
-    g.l.forEach(([a,b])=>{const A=pts[a],B=pts[b];if(A.alt>1&&B.alt>1&&Math.abs(A.x-B.x)<200){cx.moveTo(A.x,A.y);cx.lineTo(B.x,B.y)}});cx.stroke();
     up.forEach(q=>{cx.globalAlpha=alpha;cx.fillStyle=q.c;cx.beginPath();cx.arc(q.x,q.y,g.small?1.6:3.1,0,7);cx.fill();
       if(!g.small){cx.globalAlpha=alpha*.25;cx.beginPath();cx.arc(q.x,q.y,7,0,7);cx.fill()}});
-    const mx=up.reduce((a,q)=>a+q.x,0)/up.length,my=Math.max(...up.map(q=>q.y));
-    if(Math.max(...up.map(q=>q.x))-Math.min(...up.map(q=>q.x))<200&&my<205){cx.globalAlpha=alpha*.9;cx.fillStyle="#e6eef5";cx.fillText(g.n,Math.max(60,Math.min(900,mx)),my+19)}
   });
   cx.restore();
 }
