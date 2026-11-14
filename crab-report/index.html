@@ -854,11 +854,16 @@ function drawScene(ts){
   cx.fillStyle="#f4f4ee";cx.fillRect(px+2,208,10,112);cx.font="600 12px 'Barlow Condensed',sans-serif";cx.textAlign="right";
   for(let f=0;f<=8;f+=2){const y=318-(f+1.5)/9*110;cx.fillStyle="#b3261e";cx.fillRect(px+2,y-1,10,2.5);cx.fillStyle=day>.4?"#12304a":"#dfe9ee";cx.fillText(f+" ft",px-5,y+4)}
   // flag pole + pennant
-  const fx=px+150,fy=deck-34;cx.fillStyle=rgb(mix([40,40,44],[70,70,76],day));cx.fillRect(fx,fy-78,4,78);
-  const fl=24+clamp(wind/30)*52,droop=clamp(1-wind/14),sgn=(c.w.wdir!=null&&c.w.wdir>20&&c.w.wdir<160)?-1:1;
-  cx.fillStyle="#d83a8f";cx.beginPath();cx.moveTo(fx+2,fy-78);
-  for(let i=0;i<=10;i++){const u=i/10;cx.lineTo(fx+2+sgn*u*fl,fy-78+u*u*droop*34+Math.sin(u*7-t*(3+wind*.4))*(2+wind*.22)*u+u*9)}
-  for(let i=10;i>=0;i--){const u=i/10;cx.lineTo(fx+2+sgn*u*fl,fy-58+u*u*droop*34+Math.sin(u*7-t*(3+wind*.4))*(2+wind*.22)*u-u*9)}cx.fill();
+  const fx=px+192,fy=deck-34;cx.fillStyle=rgb(mix([40,40,44],[70,70,76],day));cx.fillRect(fx,fy-78,4,112);
+  const sgn=(c.w.wdir!=null&&c.w.wdir>20&&c.w.wdir<160)?-1:1,FL=50,FH=30,th=(82-77*clamp(wind/18))*Math.PI/180,flap=reduce?0:1;
+  const edge=(u,side)=>{const wv=Math.sin(u*6.5-t*(2.5+wind*.45))*(1.5+wind*.22)*u*flap,ox=-sgn*Math.sin(th)*FH*u*side,oy=(1-u+u*Math.cos(th))*FH*side;
+    return[fx+2+sgn*u*FL*Math.cos(th)+ox,fy-78+u*FL*Math.sin(th)+oy+wv]};
+  const band=(s0,s1,col)=>{cx.fillStyle=col;cx.beginPath();for(let i=0;i<=10;i++){const q=edge(i/10,s0);i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1])}for(let i=10;i>=0;i--){const q=edge(i/10,s1);cx.lineTo(q[0],q[1])}cx.closePath();cx.fill()};
+  band(0,1,"#d83a8f");band(.36,.64,day>.4?"#fbfcfa":"#cfd6da");
+  // wind speed beside the flag
+  const lbl=Math.round(wind)+" mph",lx=fx+2-sgn*10;cx.font="700 30px 'Barlow Condensed','Arial Narrow',sans-serif";cx.textAlign=sgn>0?"right":"left";
+  const tw=cx.measureText(lbl).width,bx0=sgn>0?lx-tw-7:lx-7;cx.fillStyle="rgba(10,24,38,.62)";cx.beginPath();cx.rect(bx0,fy-82,tw+14,36);cx.fill();
+  cx.fillStyle="#ffffff";cx.fillText(lbl,lx,fy-55);
   // main water
   layer(4,1,0,rgb(mix([12,34,58],[52,122,152],day)));
   // under-water body + light
@@ -866,8 +871,6 @@ function drawScene(ts){
   cx.fillStyle=g;cx.beginPath();cx.moveTo(0,Hh);for(let x=0;x<=W;x+=8)cx.lineTo(x,wl+18+wave(x,1.2,2));cx.lineTo(W,Hh);cx.fill();
   // foam line
   cx.strokeStyle="rgba(255,255,255,"+(.25+clamp(eff/8)*.5)+")";cx.lineWidth=1.5+eff*.35;cx.beginPath();for(let x=0;x<=W;x+=8){const y=wl+4+wave(x,1,0);x?cx.lineTo(x,y):cx.moveTo(x,y)}cx.stroke();
-  // buoy
-  const bx=250,by=wl+4+wave(bx,1,0),tilt=Math.cos(bx*.012+t*spd)*amp*.012;cx.save();cx.translate(bx,by);cx.rotate(tilt);cx.fillStyle="#c8322b";cx.beginPath();cx.moveTo(-13,2);cx.lineTo(13,2);cx.lineTo(8,-22);cx.lineTo(-8,-22);cx.fill();cx.fillStyle="#f4f4ee";cx.fillRect(-10.5,-12,21,5);cx.fillStyle="#333";cx.fillRect(-1.5,-36,3,14);cx.restore();
   // seafloor
   cx.fillStyle=rgb(mix([40,38,30],[196,176,120],day*.8+.1));cx.beginPath();cx.moveTo(0,Hh);cx.lineTo(0,floor+6);for(let x=0;x<=W;x+=40)cx.lineTo(x,floor+Math.sin(x*.02)*5);cx.lineTo(W,Hh);cx.fill();
   // kelp leaning with the current
@@ -878,7 +881,7 @@ function drawScene(ts){
   cx.fillStyle="rgba(255,255,255,.35)";for(let i=0;i<26;i++){const y=wl+40+((i*47)%Math.max(30,floor-wl-60)),x=(((i*131+t*rate*60)%W)+W)%W;cx.fillRect(x,y,3,1.5)}
   // fisherman on the pier, hand-lining a hoop net (yellow slicker and sou'wester when it rains)
   const wet=(c.w.rain||0)>.005,dim=.42+.58*day,sh=col=>rgb(col.map(v=>Math.round(v*dim)));
-  const MK=1.35,manX=px+48,pull=reduce?0:Math.sin(t*1.1)*2.5,hx=manX+21*MK,hy=deck+(-33+pull)*MK;
+  const MK=1.35,manX=px+24,pull=reduce?0:Math.sin(t*1.1)*2.5,hx=manX+21*MK,hy=deck+(-33+pull)*MK;
   cx.save();cx.translate(manX,deck);cx.scale(MK,MK);cx.translate(-manX,-deck);const mx0=manX;
   const coat=wet?[236,186,40]:[44,84,122],pants=wet?[214,166,30]:[52,56,66];
   cx.lineCap="round";cx.lineJoin="round";
@@ -892,8 +895,8 @@ function drawScene(ts){
   if(day<.35){cx.fillStyle="rgba(255,244,190,.9)";cx.beginPath();cx.arc(mx0+8,deck-64,2,0,7);cx.fill();cx.fillStyle="rgba(255,244,190,.10)";cx.beginPath();cx.moveTo(mx0+8,deck-64);cx.lineTo(mx0+58,deck-14);cx.lineTo(mx0+36,deck+4);cx.fill()}
   cx.restore();
   // hoop net: rigid cone of mesh between two rings, bait cage in the middle, on a rope with a float
-  const nx=px+78+lean*26+Math.sin(t*.8)*2,ny=floor-3,topY=ny-30,knot=topY-26,ropeC=day>.4?"#e9d9a4":"#a89c74";
-  cx.strokeStyle=ropeC;cx.lineWidth=2.2;cx.beginPath();cx.moveTo(hx,hy);cx.lineTo(px+80,deck-20);cx.quadraticCurveTo(px+76+lean*12,(deck+knot)/2,nx,knot);cx.stroke();
+  const nx=px+68+lean*26+Math.sin(t*.8)*2,ny=floor-3,topY=ny-30,knot=topY-26,ropeC=day>.4?"#e9d9a4":"#a89c74";
+  cx.strokeStyle=ropeC;cx.lineWidth=2.2;cx.beginPath();cx.moveTo(hx,hy);cx.lineTo(px+70,deck-22);cx.quadraticCurveTo(px+76+lean*12,(deck+knot)/2,nx,knot);cx.stroke();
   cx.fillStyle="#e8703a";cx.beginPath();cx.ellipse(nx+lean*5,knot-12,5,8,lean*.3,0,7);cx.fill();
   const RB=44,RT=24,eB=9,eT=5,mesh="rgba(214,222,228,"+(day>.4?.85:.6)+")";
   cx.strokeStyle=ropeC;cx.lineWidth=1.6;cx.beginPath();[-1,0,1].forEach(k=>{cx.moveTo(nx,knot);cx.lineTo(nx+k*RT*.9,topY+(k?0:eT))});cx.stroke();
