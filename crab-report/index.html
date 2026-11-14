@@ -876,9 +876,33 @@ function drawScene(ts){
   [70,110,480,560,620].forEach((kx,i)=>{const hK=Math.min(90+i*13,floor-wl-30);if(hK<20)return;cx.beginPath();cx.moveTo(kx,floor+2);for(let u=.1;u<=1.01;u+=.1)cx.lineTo(kx+lean*70*u*u+Math.sin(t*1.2+i+u*3)*5*u,floor-hK*u);cx.stroke()});
   // drifting specks show current
   cx.fillStyle="rgba(255,255,255,.35)";for(let i=0;i<26;i++){const y=wl+40+((i*47)%Math.max(30,floor-wl-60)),x=(((i*131+t*rate*60)%W)+W)%W;cx.fillRect(x,y,3,1.5)}
-  // hoop net on a rope from the pier
-  const nx=px+70+lean*26+Math.sin(t*.8)*2,ny=floor-4;cx.strokeStyle=day>.4?"#e9d9a4":"#a89c74";cx.lineWidth=2;cx.beginPath();cx.moveTo(px+70,deck);cx.quadraticCurveTo(px+70+lean*10,(deck+ny)/2,nx,ny-16);cx.stroke();
-  cx.beginPath();cx.moveTo(nx,ny-16);cx.lineTo(nx-34,ny);cx.moveTo(nx,ny-16);cx.lineTo(nx+34,ny);cx.stroke();cx.lineWidth=3;cx.strokeStyle="#c9ced2";cx.beginPath();cx.ellipse(nx,ny,36,7,0,0,7);cx.stroke();cx.lineWidth=2;cx.beginPath();cx.ellipse(nx,ny,17,3.5,0,0,7);cx.stroke();
+  // fisherman on the pier, hand-lining a hoop net (yellow slicker and sou'wester when it rains)
+  const wet=(c.w.rain||0)>.005,dim=.42+.58*day,sh=col=>rgb(col.map(v=>Math.round(v*dim)));
+  const MK=1.35,manX=px+48,pull=reduce?0:Math.sin(t*1.1)*2.5,hx=manX+21*MK,hy=deck+(-33+pull)*MK;
+  cx.save();cx.translate(manX,deck);cx.scale(MK,MK);cx.translate(-manX,-deck);const mx0=manX;
+  const coat=wet?[236,186,40]:[44,84,122],pants=wet?[214,166,30]:[52,56,66];
+  cx.lineCap="round";cx.lineJoin="round";
+  cx.strokeStyle=sh(pants);cx.lineWidth=7;cx.beginPath();cx.moveTo(mx0-3,deck-27);cx.lineTo(mx0-5,deck-4);cx.moveTo(mx0+4,deck-27);cx.lineTo(mx0+6,deck-4);cx.stroke();
+  cx.strokeStyle=sh([40,36,32]);cx.lineWidth=7;cx.beginPath();cx.moveTo(mx0-6,deck-3);cx.lineTo(mx0-1,deck-3);cx.moveTo(mx0+5,deck-3);cx.lineTo(mx0+11,deck-3);cx.stroke();
+  cx.fillStyle=sh(coat);cx.beginPath();cx.moveTo(mx0-9,deck-24);cx.lineTo(mx0-8,deck-50);cx.quadraticCurveTo(mx0,deck-56,mx0+8,deck-50);cx.lineTo(mx0+10,deck-24);cx.closePath();cx.fill();
+  cx.strokeStyle=sh(coat);cx.lineWidth=6;cx.beginPath();cx.moveTo(mx0+5,deck-48);cx.lineTo(mx0+13,deck-38+pull*.5);cx.lineTo(mx0+21,deck-33+pull);cx.stroke();
+  cx.fillStyle=sh([226,180,150]);cx.beginPath();cx.arc(mx0+21,deck-33+pull,3.2,0,7);cx.fill();cx.beginPath();cx.arc(mx0+1,deck-62,7.5,0,7);cx.fill();
+  if(wet){cx.fillStyle=sh(coat);cx.beginPath();cx.arc(mx0,deck-64,8.5,Math.PI,0);cx.fill();cx.beginPath();cx.ellipse(mx0-1,deck-63.5,13,3.2,-.12,0,7);cx.fill()}
+  else{cx.fillStyle=sh([150,50,44]);cx.beginPath();cx.arc(mx0+1,deck-64,7.8,Math.PI,0);cx.fill();cx.fillRect(mx0+1,deck-65.5,11,2.6)}
+  if(day<.35){cx.fillStyle="rgba(255,244,190,.9)";cx.beginPath();cx.arc(mx0+8,deck-64,2,0,7);cx.fill();cx.fillStyle="rgba(255,244,190,.10)";cx.beginPath();cx.moveTo(mx0+8,deck-64);cx.lineTo(mx0+58,deck-14);cx.lineTo(mx0+36,deck+4);cx.fill()}
+  cx.restore();
+  // hoop net: rigid cone of mesh between two rings, bait cage in the middle, on a rope with a float
+  const nx=px+78+lean*26+Math.sin(t*.8)*2,ny=floor-3,topY=ny-30,knot=topY-26,ropeC=day>.4?"#e9d9a4":"#a89c74";
+  cx.strokeStyle=ropeC;cx.lineWidth=2.2;cx.beginPath();cx.moveTo(hx,hy);cx.lineTo(px+80,deck-20);cx.quadraticCurveTo(px+76+lean*12,(deck+knot)/2,nx,knot);cx.stroke();
+  cx.fillStyle="#e8703a";cx.beginPath();cx.ellipse(nx+lean*5,knot-12,5,8,lean*.3,0,7);cx.fill();
+  const RB=44,RT=24,eB=9,eT=5,mesh="rgba(214,222,228,"+(day>.4?.85:.6)+")";
+  cx.strokeStyle=ropeC;cx.lineWidth=1.6;cx.beginPath();[-1,0,1].forEach(k=>{cx.moveTo(nx,knot);cx.lineTo(nx+k*RT*.9,topY+(k?0:eT))});cx.stroke();
+  cx.strokeStyle=mesh;cx.lineWidth=1.1;cx.beginPath();
+  for(let i=0;i<22;i++){const a0=i/22*Math.PI*2;[1.1,-1.1].forEach(d=>{const a1=a0+d*.42;cx.moveTo(nx+Math.cos(a0)*RB,ny+Math.sin(a0)*eB);cx.lineTo(nx+Math.cos(a1)*RT,topY+Math.sin(a1)*eT)})}
+  for(let i=-3;i<=3;i++){cx.moveTo(nx+i*11,ny-Math.sqrt(1-Math.pow(i*11/RB,2))*eB);cx.lineTo(nx+i*11,ny+Math.sqrt(1-Math.pow(i*11/RB,2))*eB)}
+  cx.stroke();
+  cx.strokeStyle=day>.4?"#eef2f4":"#b9c2c8";cx.lineWidth=3.2;cx.beginPath();cx.ellipse(nx,ny,RB,eB,0,0,7);cx.stroke();cx.lineWidth=2.6;cx.beginPath();cx.ellipse(nx,topY,RT,eT,0,0,7);cx.stroke();
+  cx.fillStyle="#c9a23a";cx.strokeStyle="#6e561a";cx.lineWidth=1;cx.beginPath();cx.rect(nx-6,ny-9,12,9);cx.fill();cx.stroke();cx.beginPath();cx.moveTo(nx-2,ny-9);cx.lineTo(nx-2,ny);cx.moveTo(nx+2,ny-9);cx.lineTo(nx+2,ny);cx.stroke();
   // crabs: more of them, and livelier, when the score is higher
   const n=score>=80?5:score>=65?4:score>=45?3:score>=25?2:1,live=clamp(score/100);
   for(let i=0;i<n;i++){const cr=crabs[i];if(!reduce&&score>=25){cr.x+=cr.dir*live*.9;if(cr.x>660)cr.dir=-1;if(cr.x<40)cr.dir=1}
