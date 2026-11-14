@@ -272,6 +272,8 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 
 <script>
 "use strict";
+function nz(a,b){return a==null?b:a}
+window.addEventListener("error",function(e){var el=document.getElementById("status");if(el&&!el.hidden){el.className="alert bad";el.innerHTML="<div><b>Something went wrong.</b> <span>The app hit an error on this device: "+String(e.message||"unknown").replace(/</g,"&lt;")+"</span></div>"}});
 /* ============================== SPOT DATA ============================== */
 /* exposure: how much open-ocean swell reaches the water you fish (0 = inner harbor, 1 = open surf)
    fresh: how much rain runoff hurts the spot (bays and river mouths)
@@ -379,14 +381,14 @@ if(!siteById(current))current=[...favs][0]||SITES[0].id;
 /* ============================== TIME (Pacific wall clock) ============================== */
 /* Every feed is asked for Pacific time. Times are held as "wall ms": Date.UTC() of the Pacific clock reading. */
 const H=3600e3;
-function pacNow(){const p={};new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",hourCycle:"h23",year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric"}).formatToParts(new Date()).forEach(x=>p[x.type]=+x.value);return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute)}
+function pacNow(){const p={};new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",hour12:false,year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric"}).formatToParts(new Date()).forEach(x=>p[x.type]=+x.value);return Date.UTC(p.year,p.month-1,p.day,p.hour%24,p.minute)}
 function parseT(s){const m=/^(\d+)-(\d+)-(\d+)[T ](\d+):(\d+)/.exec(s);return m?Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5]):Date.UTC(+s.slice(0,4),s.slice(5,7)-1,+s.slice(8,10))}
 const p2=n=>String(n).padStart(2,"0");
 const hourKey=ms=>{const d=new Date(ms);return d.getUTCFullYear()+"-"+p2(d.getUTCMonth()+1)+"-"+p2(d.getUTCDate())+"T"+p2(d.getUTCHours())+":00"};
 const ymd=ms=>{const d=new Date(ms);return d.getUTCFullYear()+p2(d.getUTCMonth()+1)+p2(d.getUTCDate())};
 const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function fmtTime(ms){const d=new Date(ms);let h=d.getUTCHours(),m=d.getUTCMinutes();const ap=h<12?"am":"pm";h=h%12||12;return h+(m?":"+p2(m):"")+" "+ap}
-function fmtDay(ms,now){const a=Math.floor(ms/864e5),b=Math.floor((now??pacNow())/864e5);if(a===b)return"Today";if(a===b+1)return"Tomorrow";return DOW[new Date(ms).getUTCDay()]}
+function fmtDay(ms,now){const a=Math.floor(ms/864e5),b=Math.floor(nz(now,pacNow())/864e5);if(a===b)return"Today";if(a===b+1)return"Tomorrow";return DOW[new Date(ms).getUTCDay()]}
 const fmtDate=ms=>{const d=new Date(ms);return DOW[d.getUTCDay()]+" "+MON[d.getUTCMonth()]+" "+d.getUTCDate()};
 
 /* ============================== SEASON ============================== */
@@ -404,7 +406,7 @@ const DATA={tide:{},wx:{},sea:{},alerts:{},loadedAt:0,stale:false};
 async function getJSON(url,key,maxAgeMin){
   const c=store.get("c."+key,null);
   if(c&&Date.now()-c.at<maxAgeMin*6e4)return c.d;
-  try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);const d=await r.json();store.set("c."+key,{at:Date.now(),d});return d}
+  try{const ac=typeof AbortController!=="undefined"?new AbortController():null,tm=setTimeout(()=>ac&&ac.abort(),20000);const r=await fetch(url,ac?{signal:ac.signal}:{});clearTimeout(tm);if(!r.ok)throw new Error(r.status);const d=await r.json();store.set("c."+key,{at:Date.now(),d});return d}
   catch(e){if(c){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);return c.d}throw e}
 }
 function nearestStation(lat,lon){let b=STATIONS[0],bd=1e9;for(const s of STATIONS){const d=Math.hypot(s.lat-lat,(s.lon-lon)*.78);if(d<bd){bd=d;b=s}}return b.id}
@@ -422,7 +424,7 @@ async function loadAll(force){
   sites.forEach(s=>{s.station=s.station||nearestStation(s.lat,s.lon)});
   const sig=sites.map(s=>s.id).join(",").length+"."+sites.length;
   const lat=sites.map(s=>s.lat).join(","),lon=sites.map(s=>s.lon).join(",");
-  const slat=sites.map(s=>(s.sea||s).lat??s.lat).join(","),slon=sites.map(s=>(s.sea||s).lon??s.lon).join(",");
+  const slat=sites.map(s=>(s.sea||s).lat).join(","),slon=sites.map(s=>(s.sea||s).lon).join(",");
   const tz="&timezone=America%2FLos_Angeles";
   const wxU="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+"&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,precipitation_probability,weather_code,cloud_cover&daily=sunrise,sunset&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch&forecast_days=6&past_days=3"+tz;
   const seaU="https://marine-api.open-meteo.com/v1/marine?latitude="+slat+"&longitude="+slon+"&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,sea_surface_temperature&length_unit=imperial&forecast_days=6&past_days=1"+tz;
@@ -473,8 +475,8 @@ function rain72(site,t){const m=(DATA.wx[site.id]||{}).h;if(!m)return 0;let sum=
 function cond(site,t){
   const k=hourKey(t),w=((DATA.wx[site.id]||{}).h||new Map()).get(k)||{},s=(DATA.sea[site.id]||new Map()).get(k)||{},td=tideAt(site,t);
   const season=seasonInfo(site,t),day=dayness(site,t);
-  const wave=s.wave??null,eff=wave==null?null:wave*site.exposure*(1+.6*clamp((wave-8)/12));
-  const windEff=w.wind==null?null:.6*w.wind+.4*(w.gust??w.wind);
+  const wave=nz(s.wave,null),eff=wave==null?null:wave*site.exposure*(1+.6*clamp((wave-8)/12));
+  const windEff=w.wind==null?null:.6*w.wind+.4*nz(w.gust,w.wind);
   const r72=rain72(site,t);
   // parts, each 0..1
   let pT=.5,pS=.6,pW=.7,pL=.6+.4*(1-day);
@@ -706,7 +708,7 @@ $("logList").addEventListener("click",e=>{const b=e.target.closest("[data-del]")
   if(delArm!==b.dataset.del){delArm=b.dataset.del;b.textContent="Tap again to delete";return}
   log=log.filter(x=>String(x.id)!==delArm);delArm=null;store.set("log",log);renderLog()});
 function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
-$("expCsv").addEventListener("click",()=>{const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+$("expCsv").addEventListener("click",()=>{const q=v=>'"'+String(nz(v,"")).replace(/"/g,'""')+'"';
   download("crab-log.csv",["Date,Time,Spot,Gear,Keepers,Thrown back,Biggest (in),Bait,Hours,Score,Tide stage,Tide (ft),Swell (ft),Wind (mph),Wind dir,Water (F),Moon,Notes"].concat(log.map(e=>{const s=e.snap||{},d=new Date(e.t);return[d.toISOString().slice(0,10),fmtTime(e.t),e.spotName,e.gear,e.keep,e.rel,e.big,e.bait,e.hrs,s.score,s.stage,s.tide,s.wave,s.wind,s.wdir,s.sst,s.moon,e.notes].map(q).join(",")})).join("\n"),"text/csv")});
 $("expJson").addEventListener("click",()=>download("crab-report-backup.json",JSON.stringify({log,favs:[...favs],custom}),"application/json"));
 $("impJson").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.log))throw 0;const ids=new Set(log.map(x=>x.id));j.log.forEach(x=>{if(!ids.has(x.id))log.push(x)});log.sort((a,b)=>b.t-a.t);store.set("log",log);
@@ -729,7 +731,7 @@ const clouds=Array.from({length:6},(_,i)=>({x:i*190+40,y:40+((i*53)%70),s:.7+((i
 const mix=(a,b,f)=>a.map((v,i)=>Math.round(v+(b[i]-v)*f)),rgb=c=>"rgb("+c.join(",")+")";
 function drawScene(ts){
   const st=sceneState;if(!st)return;const W=960,Hh=540,t=reduce?0:ts/1000,c=st.c,site=st.site;
-  const day=c.day,eff=clamp(c.eff??1.5,0,12),wind=c.w.wind??5,score=c.score,td=c.tide,cloud=(c.w.cloud??30)/100;
+  const day=c.day,eff=clamp(nz(c.eff,1.5),0,12),wind=nz(c.w.wind,5),score=c.score,td=c.tide,cloud=nz(c.w.cloud,30)/100;
   // sky
   const dusk=clamp(1-Math.abs(day-.5)*2)*(day<1&&day>0?1:0);
   let top=mix([10,22,48],[96,164,206],day),bot=mix([24,44,80],[206,231,240],day);
