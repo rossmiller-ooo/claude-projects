@@ -235,7 +235,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
       <div class="grid" id="inst"></div>
 
       <div class="card"><h2>Best times to go</h2><div class="windows" id="windows"></div>
-        <div class="lbl" style="margin:14px 0 8px">Next five days — best score each day</div><div class="days" id="days"></div><div id="dayWhy" hidden></div><p class="fine" style="margin-top:8px">Tap any time or day to see why it scored that way.</p></div>
+        <div class="lbl" style="margin:14px 0 8px">Next ten days — best score each day</div><div class="days" id="days"></div><div id="dayWhy" hidden></div><p class="fine" style="margin-top:8px">Tap any time or day to see why it scored that way. Swell and wind forecasts past five days are rough guides; the tides are exact.</p></div>
 
       <div class="card"><h2>Tide &amp; crabbing score, next 48 hours</h2>
         <div class="chartbox"><svg id="tideChart" viewBox="0 0 720 250" role="img" aria-label="Tide height and crabbing score for the next 48 hours"></svg></div>
@@ -426,8 +426,8 @@ async function getJSON(url,key,maxAgeMin){
 function nearestStation(lat,lon){let b=STATIONS[0],bd=1e9;for(const s of STATIONS){const d=Math.hypot(s.lat-lat,(s.lon-lon)*.78);if(d<bd){bd=d;b=s}}return b.id}
 async function loadTide(st,now){
   if(DATA.tide[st])return;
-  const u="https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=robs_crab_report&begin_date="+ymd(now-24*H)+"&range=192&datum=MLLW&station="+st+"&time_zone=lst_ldt&units=english&interval=hilo&format=json";
-  const j=await getJSON(u,"tide."+st+"."+ymd(now),360);
+  const u="https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=robs_crab_report&begin_date="+ymd(now-24*H)+"&range=312&datum=MLLW&station="+st+"&time_zone=lst_ldt&units=english&interval=hilo&format=json";
+  const j=await getJSON(u,"tide2."+st+"."+ymd(now),360);
   if(!j.predictions)throw new Error("no tide");
   DATA.tide[st]=j.predictions.map(p=>({t:parseT(p.t),v:+p.v,hi:p.type==="H"}));
 }
@@ -440,11 +440,11 @@ async function loadAll(force){
   const lat=sites.map(s=>s.lat).join(","),lon=sites.map(s=>s.lon).join(",");
   const slat=sites.map(s=>(s.sea||s).lat).join(","),slon=sites.map(s=>(s.sea||s).lon).join(",");
   const tz="&timezone=America%2FLos_Angeles";
-  const wxU="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+"&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,precipitation_probability,weather_code,cloud_cover&daily=sunrise,sunset&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch&forecast_days=6&past_days=3"+tz;
-  const seaU="https://marine-api.open-meteo.com/v1/marine?latitude="+slat+"&longitude="+slon+"&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,sea_surface_temperature&length_unit=imperial&forecast_days=6&past_days=1"+tz;
+  const wxU="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+"&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,precipitation_probability,weather_code,cloud_cover&daily=sunrise,sunset&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch&forecast_days=11&past_days=3"+tz;
+  const seaU="https://marine-api.open-meteo.com/v1/marine?latitude="+slat+"&longitude="+slon+"&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,sea_surface_temperature&length_unit=imperial&forecast_days=11&past_days=1"+tz;
   const stations=[...new Set(sites.map(s=>s.station).concat(FALLBACK_STATION))];
   const [wx,sea]=await Promise.all([
-    getJSON(wxU,"wx."+sig,45),getJSON(seaU,"sea."+sig,45),
+    getJSON(wxU,"wx2."+sig,45),getJSON(seaU,"sea2."+sig,45),
     ...stations.map(st=>loadTide(st,now).catch(()=>null))]);
   if(!DATA.tide[FALLBACK_STATION]&&!Object.keys(DATA.tide).length)throw new Error("tides unavailable");
   const arr=x=>Array.isArray(x)?x:[x];
@@ -627,16 +627,16 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(
   document.querySelectorAll("[data-day]").forEach(x=>x.setAttribute("aria-expanded","false"));
   if(was||!c){$("dayWhy").hidden=true;return}
   b.setAttribute("aria-expanded","true");const g=grade(c.score);
-  $("dayWhy").hidden=false;$("dayWhy").innerHTML='<div class="hd">'+fmtDay(c.t)+" "+fmtTime(c.t)+' · <span class="t-'+g.c+'">'+c.score+" "+g.w+"</span></div>"+explain(c,site)});
+  $("dayWhy").hidden=false;$("dayWhy").innerHTML='<div class="hd">'+fmtDate(c.t)+" "+fmtTime(c.t)+' · <span class="t-'+g.c+'">'+c.score+" "+g.w+"</span></div>"+explain(c,site)});
 function renderWindows(site,now){
   const ws=bestWindows(site,now,72,4);
   $("windows").innerHTML=ws.length?ws.map(w=>{const g=grade(w.score),td=w.tide;
     return'<details class="win"><summary><div class="row"><div class="sc b-'+g.c+'">'+w.score+'</div><div><div class="t">'+fmtDay(w.from,now)+" "+fmtTime(w.from)+" – "+fmtTime(w.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" ("+td.near.v.toFixed(1)+" ft) · swell "+(w.wave==null?"–":w.wave.toFixed(0)+" ft")+" · wind "+(w.w.wind==null?"–":Math.round(w.w.wind)+" mph")+'</div></div><span class="chev" aria-hidden="true">›</span></div></summary>'+explain(w,site)+"</details>"}).join("")
     :'<p class="empty">'+(seasonInfo(site,now).open?"No decent windows in the next three days. Check the other spots or wait for the swell and wind to lie down.":"Season is closed.")+"</p>";
   const days=[];const d0=Math.floor(now/864e5)*864e5;
-  for(let d=0;d<5;d++){const hs=hoursAhead(site,d0+d*864e5,24).filter(c=>c.tide&&c.t>=now-H&&!(site.dayOnly&&c.day<.5));if(!hs.length)continue;const hh=hs.filter(c=>{const h=new Date(c.t).getUTCHours();return h>=5&&h<=21});if(!hh.length)continue;const b=hh.reduce((a,c)=>c.score>a.score?c:a);days.push(b)}
+  for(let d=0;d<10;d++){const hs=hoursAhead(site,d0+d*864e5,24).filter(c=>c.tide&&c.t>=now-H&&!(site.dayOnly&&c.day<.5));if(!hs.length)continue;const hh=hs.filter(c=>{const h=new Date(c.t).getUTCHours();return h>=5&&h<=21&&c.wave!=null&&c.w.wind!=null});if(!hh.length)continue;const b=hh.reduce((a,c)=>c.score>a.score?c:a);days.push(b)}
   dayConds=days;$("dayWhy").hidden=true;
-  $("days").innerHTML=days.map((b,i)=>{const g=grade(b.score);return'<button type="button" class="day" data-day="'+i+'" aria-expanded="false"><div class="lbl">'+(fmtDay(b.t,now)==="Today"?"Today":DOW[new Date(b.t).getUTCDay()])+'</div><div class="bar"><i style="height:'+Math.max(6,b.score)+"%;background:var(--"+g.c+')"></i></div><div class="s t-'+g.c+'">'+b.score+'</div><div class="n">'+fmtTime(b.t)+"</div></button>"}).join("");
+  $("days").innerHTML=days.map((b,i)=>{const g=grade(b.score);return'<button type="button" class="day" data-day="'+i+'" aria-expanded="false"><div class="lbl">'+(fmtDay(b.t,now)==="Today"?"Today":DOW[new Date(b.t).getUTCDay()]+" "+new Date(b.t).getUTCDate())+'</div><div class="bar"><i style="height:'+Math.max(6,b.score)+"%;background:var(--"+g.c+')"></i></div><div class="s t-'+g.c+'">'+b.score+'</div><div class="n">'+fmtTime(b.t)+"</div></button>"}).join("");
 }
 function renderChart(site,now,sel){
   const W=720,Hh=250,L=38,R=12,T=22,B=30,t0=Math.floor(now/H)*H-3*H,t1=t0+51*H;
