@@ -930,11 +930,11 @@ function drawScene(ts){
   for(let i=0;i<n;i++){const cr=crabs[i];if(!reduce&&score>=25){cr.x+=cr.dir*live*.9;if(cr.x>660)cr.dir=-1;if(cr.x<40)cr.dir=1}
     drawCrab(cr.x,floor-10+(score<25?9:0),t*(4+live*8)+cr.ph,score<25,day)}
   // rain
-  const rain=c.w.rain||0;if(rain>.005){const nR=Math.round(40+storm*70),len=22+storm*12,slant=8+wind*.5;
-    cx.strokeStyle="rgba(214,230,242,"+(.55+.3*storm)+")";cx.lineWidth=2.6+storm*1.6;cx.lineCap="round";cx.beginPath();
-    for(let i=0;i<nR;i++){const x=((i*73+t*260)%(W+120))-60,y=(i*41+t*(620+storm*260))%(wl+10);cx.moveTo(x,y);cx.lineTo(x-slant*len/24,y+len)}cx.stroke();
+  const rain=c.w.rain||0;if(rain>.005){const nR=Math.round(22+storm*48),len=18+storm*10,slant=8+wind*.5;
+    cx.strokeStyle="rgba(214,230,242,"+(.4+.25*storm)+")";cx.lineWidth=2.2+storm*1.2;cx.lineCap="round";cx.beginPath();
+    for(let i=0;i<nR;i++){const x=((i*97+t*(40+wind*2))%(W+120))-60,y=(i*61+t*(210+storm*110))%(wl+10);cx.moveTo(x,y);cx.lineTo(x-slant*len/24,y+len)}cx.stroke();
     // splashes where drops hit the water
-    cx.strokeStyle="rgba(235,244,250,.6)";cx.lineWidth=1.6;cx.beginPath();for(let i=0;i<10+storm*14;i++){const x=(i*157+Math.floor(t*3+i)*89)%W,ph=(t*3+i)%1,y=wl+6+wave(x,1,0);cx.moveTo(x-5*ph-2,y-6*ph);cx.lineTo(x-2,y);cx.moveTo(x+5*ph+2,y-6*ph);cx.lineTo(x+2,y)}cx.stroke()}
+    cx.strokeStyle="rgba(235,244,250,.6)";cx.lineWidth=1.6;cx.beginPath();for(let i=0;i<5+storm*8;i++){const x=(i*157+Math.floor(t*1.2+i*.37)*89)%W,ph=(t*1.2+i*.37)%1,y=wl+6+wave(x,1,0);cx.moveTo(x-5*ph-2,y-6*ph);cx.lineTo(x-2,y);cx.moveTo(x+5*ph+2,y-6*ph);cx.lineTo(x+2,y)}cx.stroke()}
   if(!reduce)requestAnimationFrame(drawScene);
 }
 function drawCrab(x,y,ph,hiding,day){
