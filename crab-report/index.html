@@ -858,12 +858,18 @@ function drawScene(ts){
   cx.fillStyle="#f4f4ee";cx.fillRect(px+2,208,10,112);cx.font="600 12px 'Barlow Condensed',sans-serif";cx.textAlign="right";
   for(let f=0;f<=8;f+=2){const y=318-(f+1.5)/9*110;cx.fillStyle="#b3261e";cx.fillRect(px+2,y-1,10,2.5);cx.fillStyle=day>.4?"#12304a":"#dfe9ee";cx.fillText(f+" ft",px-5,y+4)}
   // flag pole + pennant
-  const fx=px+192,fy=deck-34;cx.fillStyle=rgb(mix([40,40,44],[70,70,76],day));cx.fillRect(fx,fy-78,4,112);
-  const sgn=(c.w.wdir!=null&&c.w.wdir>20&&c.w.wdir<160)?-1:1,FL=50,FH=30,th=(82-77*clamp(wind/18))*Math.PI/180,flap=reduce?0:1;
-  const edge=(u,side)=>{const wv=Math.sin(u*6.5-t*(2.5+wind*.45))*(1.5+wind*.22)*u*flap,ox=-sgn*Math.sin(th)*FH*u*side,oy=(1-u+u*Math.cos(th))*FH*side;
+  const fx=px+170,fy=deck-34;cx.fillStyle=rgb(mix([40,40,44],[70,70,76],day));cx.fillRect(fx,fy-78,4,112);
+  const sgn=(c.w.wdir!=null&&c.w.wdir>20&&c.w.wdir<160)?-1:1,FL=84,FH=48,th=(82-77*clamp(wind/18))*Math.PI/180,flap=reduce?0:1;
+  // triangular burgee: white field with a navy border and a red crab at the hoist (a made-up design)
+  const edge=(u,sd)=>{const side=.5+(sd-.5)*(1-u*.97),wv=Math.sin(u*6.5-t*(2.5+wind*.45))*(1.5+wind*.22)*u*flap,ox=-sgn*Math.sin(th)*FH*u*side,oy=(1-u+u*Math.cos(th))*FH*side;
     return[fx+2+sgn*u*FL*Math.cos(th)+ox,fy-78+u*FL*Math.sin(th)+oy+wv]};
-  const band=(s0,s1,col)=>{cx.fillStyle=col;cx.beginPath();for(let i=0;i<=10;i++){const q=edge(i/10,s0);i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1])}for(let i=10;i>=0;i--){const q=edge(i/10,s1);cx.lineTo(q[0],q[1])}cx.closePath();cx.fill()};
-  band(0,1,"#d83a8f");band(.36,.64,day>.4?"#fbfcfa":"#cfd6da");
+  const band=(s0,s1,col,u0,u1)=>{cx.fillStyle=col;cx.beginPath();for(let i=0;i<=10;i++){const q=edge(u0+(u1-u0)*i/10,s0);i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1])}for(let i=10;i>=0;i--){const q=edge(u0+(u1-u0)*i/10,s1);cx.lineTo(q[0],q[1])}cx.closePath();cx.fill()};
+  const nightF=day>.4?1:.78,fc=c3=>rgb(c3.map(v=>Math.round(v*nightF)));
+  band(0,1,fc([22,52,96]),0,1);band(.15,.85,fc([250,250,246]),.03,.9);
+  {const q=edge(.2,.5),q2=edge(.3,.5),ang=Math.atan2(q2[1]-q[1],(q2[0]-q[0])*sgn)*sgn,red=fc([208,62,40]);
+    cx.save();cx.translate(q[0],q[1]);cx.rotate(ang);cx.strokeStyle=red;cx.fillStyle=red;cx.lineWidth=1.8;cx.lineCap="round";
+    cx.beginPath();for(let k=-1;k<=1;k+=2){for(let i=0;i<3;i++){cx.moveTo(k*5,1+i*1.5);cx.lineTo(k*(11+i),-1+i*3.4)}cx.moveTo(k*5,-3);cx.lineTo(k*9,-8)}cx.stroke();
+    cx.beginPath();cx.ellipse(0,0,7.5,5,0,0,7);cx.fill();cx.beginPath();cx.arc(-10,-9.5,3.1,0,7);cx.arc(10,-9.5,3.1,0,7);cx.fill();cx.restore()}
   // wind speed beside the flag
   const lbl=Math.round(wind)+" mph",lx=fx+2-sgn*10;cx.font="700 30px 'Barlow Condensed','Arial Narrow',sans-serif";cx.textAlign=sgn>0?"right":"left";
   const tw=cx.measureText(lbl).width,bx0=sgn>0?lx-tw-7:lx-7;cx.fillStyle="rgba(10,24,38,.62)";cx.beginPath();cx.rect(bx0,fy-82,tw+14,36);cx.fill();
