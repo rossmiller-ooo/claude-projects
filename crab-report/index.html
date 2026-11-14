@@ -69,6 +69,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 .chip{flex:none;border:1.5px solid var(--ink);background:var(--card);border-radius:999px;padding:9px 15px;font-weight:600;cursor:pointer;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--card)}
 .chip.more{border-style:dashed;color:var(--ink2);border-color:var(--ink2)}
+.chip.more[aria-pressed="true"]{border-style:solid;color:var(--card);border-color:var(--ink)}
 .chip .st{color:var(--magenta);margin-right:4px}
 .chip[aria-pressed="true"] .st{color:inherit}
 
@@ -586,10 +587,11 @@ const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 let viewOffset=0, sceneState=null;
 function mapLinks(s,small){const q=s.lat+","+s.lon,c=small?"btn small":"btn";
   return'<a class="'+c+'" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q+'">Google Maps</a><a class="'+c+'" target="_blank" rel="noopener" href="https://maps.apple.com/?daddr='+q+"&q="+encodeURIComponent(s.name)+'">Apple Maps</a>'}
+let curTab="today";
 function renderPicker(){
   const sites=allSites(),favList=sites.filter(s=>favs.has(s.id));
   const list=favList.slice();const cur=siteById(current);if(cur&&!favs.has(cur.id))list.push(cur);
-  $("picker").innerHTML=list.map(s=>'<button class="chip" type="button" data-id="'+s.id+'" aria-pressed="'+(s.id===current)+'">'+(favs.has(s.id)?'<span class="st">★</span>':"")+esc(s.short||s.name)+"</button>").join("")+'<button class="chip more" type="button" data-id="">More spots…</button>';
+  $("picker").innerHTML=list.map(s=>'<button class="chip" type="button" data-id="'+s.id+'" aria-pressed="'+(curTab==="today"&&s.id===current)+'">'+(favs.has(s.id)?'<span class="st">★</span>':"")+esc(s.short||s.name)+"</button>").join("")+'<button class="chip more" type="button" data-id="" aria-pressed="'+(curTab==="spots")+'">More spots…</button>';
 }
 $("picker").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(!b.dataset.id){showTab("spots");return}selectSite(b.dataset.id)});
 function selectSite(id){current=id;store.set("current",id);viewOffset=0;$("scrub").value=0;renderPicker();showTab("today");renderToday()}
@@ -950,7 +952,7 @@ function drawCrab(x,y,ph,hiding,day){
 /* ============================== TABS / BOOT ============================== */
 function showTab(name){["today","spots","log","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
-  $("picker").hidden=name!=="today";
+  curTab=name;$("picker").hidden=name!=="today"&&name!=="spots";renderPicker();
   if(name==="spots")renderSpots();if(name==="log"){fillSpotSelect();renderLog()}if(name==="rules")renderRules()}
 document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){showTab(b.dataset.tab);window.scrollTo(0,0)}});
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
