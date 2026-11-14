@@ -911,9 +911,11 @@ function drawScene(ts){
   if(day<.35){cx.fillStyle="rgba(255,244,190,.9)";cx.beginPath();cx.arc(mx0+8,deck-64,2,0,7);cx.fill();cx.fillStyle="rgba(255,244,190,.10)";cx.beginPath();cx.moveTo(mx0+8,deck-64);cx.lineTo(mx0+58,deck-14);cx.lineTo(mx0+36,deck+4);cx.fill()}
   cx.restore();
   // hoop net: rigid cone of mesh between two rings, bait cage in the middle, on a rope with a float
-  const nx=px+68+lean*26+Math.sin(t*.8)*2,ny=floor-3,topY=ny-30,knot=topY-26,ropeC=day>.4?"#e9d9a4":"#a89c74";
-  cx.strokeStyle=ropeC;cx.lineWidth=2.2;cx.beginPath();cx.moveTo(hx,hy);cx.lineTo(px+70,deck-22);cx.quadraticCurveTo(px+76+lean*12,(deck+knot)/2,nx,knot);cx.stroke();
-  cx.fillStyle="#e8703a";cx.beginPath();cx.ellipse(nx+lean*5,knot-12,5,8,lean*.3,0,7);cx.fill();
+  const surge=reduce?0:Math.sin(t*(.9+eff*.07))*eff*2.4,tilt=-lean*.32+(reduce?0:Math.sin(t*1.3+1)*eff*.014),
+  nx=px+68+lean*52+surge,ny=floor-3-Math.abs(lean)*7,topY=ny-30,knot=topY-26,kx=nx+56*Math.sin(tilt),ky=ny-56*Math.cos(tilt),ropeC=day>.4?"#e9d9a4":"#a89c74";
+  cx.strokeStyle=ropeC;cx.lineWidth=2.2;cx.beginPath();cx.moveTo(hx,hy);cx.lineTo(px+70,deck-22);cx.quadraticCurveTo(px+72+lean*46+(reduce?0:Math.sin(t*1.7)*wind*.3),(deck+ky)/2,kx,ky);cx.stroke();
+  cx.save();cx.translate(nx,ny);cx.rotate(tilt);cx.translate(-nx,-ny);
+  cx.fillStyle="#e8703a";cx.beginPath();cx.ellipse(nx,knot-10,5,8,0,0,7);cx.fill();
   const RB=44,RT=24,eB=9,eT=5,mesh="rgba(214,222,228,"+(day>.4?.85:.6)+")";
   cx.strokeStyle=ropeC;cx.lineWidth=1.6;cx.beginPath();[-1,0,1].forEach(k=>{cx.moveTo(nx,knot);cx.lineTo(nx+k*RT*.9,topY+(k?0:eT))});cx.stroke();
   cx.strokeStyle=mesh;cx.lineWidth=1.1;cx.beginPath();
@@ -922,6 +924,7 @@ function drawScene(ts){
   cx.stroke();
   cx.strokeStyle=day>.4?"#eef2f4":"#b9c2c8";cx.lineWidth=3.2;cx.beginPath();cx.ellipse(nx,ny,RB,eB,0,0,7);cx.stroke();cx.lineWidth=2.6;cx.beginPath();cx.ellipse(nx,topY,RT,eT,0,0,7);cx.stroke();
   cx.fillStyle="#c9a23a";cx.strokeStyle="#6e561a";cx.lineWidth=1;cx.beginPath();cx.rect(nx-6,ny-9,12,9);cx.fill();cx.stroke();cx.beginPath();cx.moveTo(nx-2,ny-9);cx.lineTo(nx-2,ny);cx.moveTo(nx+2,ny-9);cx.lineTo(nx+2,ny);cx.stroke();
+  cx.restore();
   // crabs: more of them, and livelier, when the score is higher
   const n=score>=80?5:score>=65?4:score>=45?3:score>=25?2:1,live=clamp(score/100);
   for(let i=0;i<n;i++){const cr=crabs[i];if(!reduce&&score>=25){cr.x+=cr.dir*live*.9;if(cr.x>660)cr.dir=-1;if(cr.x<40)cr.dir=1}
