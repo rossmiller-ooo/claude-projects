@@ -89,6 +89,8 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .verdict{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
 .verdict .word{font:700 2rem/1 var(--f-display)}
 .verdict .why{margin-top:6px;color:var(--ink2)}
+.gauge{display:block;width:100%;max-width:150px;height:auto;aspect-ratio:200/128;overflow:hidden}
+.verdict>*{min-width:0}
 .gauge text{font-family:var(--f-data);fill:var(--ink)}
 .pill{display:inline-block;border-radius:999px;padding:2px 10px;font:700 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
 .t-good{color:var(--good)} .t-fair{color:var(--fair)} .t-bad{color:var(--bad)}
@@ -210,7 +212,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
       </div>
 
       <div class="card verdict">
-        <svg class="gauge" id="gauge" viewBox="0 0 200 128" role="img"></svg>
+        <svg class="gauge" id="gauge" viewBox="0 0 200 128" width="150" height="96" preserveAspectRatio="xMidYMid meet" role="img"></svg>
         <div><div class="lbl" id="vLbl">Crabbing outlook</div><div class="word" id="vWord"></div><p class="why" id="vWhy"></p></div>
       </div>
 
