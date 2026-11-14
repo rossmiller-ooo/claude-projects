@@ -787,6 +787,36 @@ const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const crabs=Array.from({length:5},(_,i)=>({x:120+i*150,dir:i%2?1:-1,ph:i*1.7}));
 const clouds=Array.from({length:6},(_,i)=>({x:i*190+40,y:40+((i*53)%70),s:.7+((i*37)%10)/14}));
 const mix=(a,b,f)=>a.map((v,i)=>Math.round(v+(b[i]-v)*f)),rgb=c=>"rgb("+c.join(",")+")";
+/* Real night sky: bright constellations placed by the spot's latitude, longitude, date and time.
+   The sky is a 360° panorama centred on due west (the ocean): south at left-centre, north at right-centre. */
+const SKY=[
+ {n:"Big Dipper",s:[[11.062,61.75],[11.031,56.38],[11.897,53.69],[12.257,57.03],[12.900,55.96],[13.399,54.93],[13.792,49.31]],l:[[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]]},
+ {n:"North Star",s:[[2.530,89.26]],l:[]},
+ {n:"Cassiopeia",s:[[0.153,59.15],[0.675,56.54],[0.945,60.72],[1.430,60.24],[1.907,63.67]],l:[[0,1],[1,2],[2,3],[3,4]]},
+ {n:"Orion",s:[[5.919,7.41,"#ffc9a0"],[5.419,6.35],[5.679,-1.94],[5.604,-1.20],[5.533,-0.30],[5.796,-9.67],[5.242,-8.20,"#cfe0ff"]],l:[[0,1],[0,2],[1,4],[2,3],[3,4],[2,5],[4,6],[5,6]]},
+ {n:"Sirius",s:[[6.752,-16.72,"#dbe8ff"]],l:[]},
+ {n:"Summer Triangle",s:[[18.616,38.78],[20.690,45.28],[19.846,8.87]],l:[[0,1],[1,2],[2,0]]},
+ {n:"Pleiades",s:[[3.791,24.11],[3.763,24.11],[3.772,24.37],[3.747,24.29],[3.820,24.05],[3.753,23.95]],l:[],small:true}];
+function drawSky(site,t,alpha){
+  if(alpha<=.02)return;
+  const R=Math.PI/180,utc=t-Math.round((pacNow()-Date.now())/6e4)*6e4,jd=utc/864e5+2440587.5;
+  const lst=(((280.46061837+360.98564736629*(jd-2451545)+site.lon)%360)+360)%360,lat=site.lat*R;
+  cx.save();cx.lineCap="round";cx.textAlign="center";cx.font="italic 500 15px 'Zilla Slab',Georgia,serif";
+  SKY.forEach(g=>{
+    const pts=g.s.map(st=>{const ha=(lst-st[0]*15)*R,dec=st[1]*R;
+      const alt=Math.asin(Math.sin(dec)*Math.sin(lat)+Math.cos(dec)*Math.cos(lat)*Math.cos(ha))/R;
+      const az=(Math.atan2(Math.sin(ha),Math.cos(ha)*Math.sin(lat)-Math.tan(dec)*Math.cos(lat))/R+180+360)%360;
+      return{x:((az-90+360)%360)/360*960,y:252-alt*2.62,alt,c:st[2]||"#ffffff"}});
+    const up=pts.filter(q=>q.alt>3);if(up.length*2<pts.length)return;
+    cx.globalAlpha=alpha*.55;cx.strokeStyle="#cfe0f2";cx.lineWidth=1.4;cx.beginPath();
+    g.l.forEach(([a,b])=>{const A=pts[a],B=pts[b];if(A.alt>1&&B.alt>1&&Math.abs(A.x-B.x)<200){cx.moveTo(A.x,A.y);cx.lineTo(B.x,B.y)}});cx.stroke();
+    up.forEach(q=>{cx.globalAlpha=alpha;cx.fillStyle=q.c;cx.beginPath();cx.arc(q.x,q.y,g.small?1.6:3.1,0,7);cx.fill();
+      if(!g.small){cx.globalAlpha=alpha*.25;cx.beginPath();cx.arc(q.x,q.y,7,0,7);cx.fill()}});
+    const mx=up.reduce((a,q)=>a+q.x,0)/up.length,my=Math.max(...up.map(q=>q.y));
+    if(Math.max(...up.map(q=>q.x))-Math.min(...up.map(q=>q.x))<200&&my<205){cx.globalAlpha=alpha*.9;cx.fillStyle="#e6eef5";cx.fillText(g.n,Math.max(60,Math.min(900,mx)),my+19)}
+  });
+  cx.restore();
+}
 function drawScene(ts){
   const st=sceneState;if(!st)return;const W=960,Hh=540,t=reduce?0:ts/1000,c=st.c,site=st.site;
   const day=c.day,eff=clamp(nz(c.eff,1.5),0,12),wind=nz(c.w.wind,5),score=c.score,td=c.tide,cloud=nz(c.w.cloud,30)/100;
@@ -797,7 +827,8 @@ function drawScene(ts){
   if(cloud>.6){const g=(cloud-.6)*1.6;top=mix(top,[110,122,134].map(v=>v*(.35+.65*day)),g*.7);bot=mix(bot,[170,180,188].map(v=>v*(.35+.65*day)),g*.7)}
   let g=cx.createLinearGradient(0,0,0,330);g.addColorStop(0,rgb(top));g.addColorStop(1,rgb(bot));cx.fillStyle=g;cx.fillRect(0,0,W,Hh);
   // stars, sun, moon
-  if(day<.5){cx.fillStyle="rgba(255,255,255,"+(.8*(1-day*2)*(1-cloud*.8))+")";for(let i=0;i<50;i++){const x=(i*197)%W,y=(i*89)%230;cx.fillRect(x,y,(i%3?1.5:2.5),(i%3?1.5:2.5))}}
+  if(day<.5){cx.fillStyle="rgba(255,255,255,"+(.8*(1-day*2)*(1-cloud*.8))+")";for(let i=0;i<50;i++){const x=(i*197)%W,y=(i*89)%230;cx.fillRect(x,y,(i%3?1.5:1.8),(i%3?1.5:1.8))}
+    drawSky(site,c.t,(1-day*2)*(1-cloud*.45))}
   const sun=sunFor(site,c.t),sf=(c.t-sun.rise)/(sun.set-sun.rise);
   if(sf>-.08&&sf<1.08){const sx=80+sf*800,sy=300-Math.sin(clamp(sf)*Math.PI)*240;cx.globalAlpha=1-cloud*.6;cx.fillStyle=dusk>.3?"#ffd08a":"#fff3c4";cx.beginPath();cx.arc(sx,sy,30,0,7);cx.fill();cx.globalAlpha=.25*(1-cloud*.6);cx.beginPath();cx.arc(sx,sy,48,0,7);cx.fill();cx.globalAlpha=1}
   else{const mp=moon(c.t),mx=700,my=90;cx.globalAlpha=1-cloud*.7;cx.fillStyle="#f2f0e0";cx.beginPath();cx.arc(mx,my,26,0,7);cx.fill();
