@@ -829,6 +829,8 @@ function drawScene(ts){
   let top=mix([10,22,48],[96,164,206],day),bot=mix([24,44,80],[206,231,240],day);
   bot=mix(bot,[240,150,96],dusk*.75);top=mix(top,[70,80,130],dusk*.4);
   if(cloud>.6){const g=(cloud-.6)*1.6;top=mix(top,[110,122,134].map(v=>v*(.35+.65*day)),g*.7);bot=mix(bot,[170,180,188].map(v=>v*(.35+.65*day)),g*.7)}
+  const storm=clamp((c.w.rain||0)/.06);
+  if(storm>0){top=mix(top,[70,78,90].map(v=>v*(.4+.6*day)),.35+.5*storm);bot=mix(bot,[120,130,140].map(v=>v*(.4+.6*day)),.35+.5*storm)}
   let g=cx.createLinearGradient(0,0,0,330);g.addColorStop(0,rgb(top));g.addColorStop(1,rgb(bot));cx.fillStyle=g;cx.fillRect(0,0,W,Hh);
   // stars, sun, moon
   if(day<.5){const na=(1-day*2)*(1-cloud*.8);
@@ -839,8 +841,12 @@ function drawScene(ts){
   else{const mp=moon(c.t),mx=700,my=90;cx.globalAlpha=1-cloud*.7;cx.fillStyle="#f2f0e0";cx.beginPath();cx.arc(mx,my,26,0,7);cx.fill();
     cx.save();cx.beginPath();cx.arc(mx,my,26.5,0,7);cx.clip();cx.fillStyle=rgb(mix(top,[40,52,80],.5));cx.beginPath();cx.arc(mx+(mp.f<.5?-1:1)*52*mp.illum,my,27,0,7);cx.fill();cx.restore();cx.globalAlpha=1}
   // clouds
-  const nC=Math.round(cloud*6);for(let i=0;i<nC;i++){const cl=clouds[i],x=((cl.x+t*(4+wind*.9))%(W+260))-130;cx.fillStyle="rgba("+(day>.5?"255,255,255":"150,165,185")+","+(.55+.3*cloud)+")";
-    cx.beginPath();cx.ellipse(x,cl.y,70*cl.s,20*cl.s,0,0,7);cx.ellipse(x-35*cl.s,cl.y+8,40*cl.s,15*cl.s,0,0,7);cx.ellipse(x+40*cl.s,cl.y+7,46*cl.s,16*cl.s,0,0,7);cx.fill()}
+  // fair-weather cloud is pale and puffy; rain cloud is dark, heavy and flat-bottomed
+  const nC=storm>0?6:Math.round(cloud*6),cw=day>.5?[255,255,255]:[150,165,185],cs=day>.5?[92,100,112]:[52,60,74],cc=mix(cw,cs,storm>0?.55+.45*storm:0),big=1+.45*(storm>0?.5+.5*storm:0);
+  for(let i=0;i<nC;i++){const cl=clouds[i],x=((cl.x+t*(4+wind*.9))%(W+320))-160,y=cl.y-(storm>0?8:0),k=cl.s*big;
+    cx.fillStyle="rgba("+cc.join(",")+","+(storm>0?.94:.55+.3*cloud)+")";
+    cx.beginPath();cx.ellipse(x,y,70*k,20*k,0,0,7);cx.ellipse(x-35*k,y+8,40*k,15*k,0,0,7);cx.ellipse(x+40*k,y+7,46*k,16*k,0,0,7);cx.ellipse(x+8*k,y-12*k,34*k,16*k,0,0,7);cx.fill();
+    if(storm>0){cx.fillStyle="rgba("+mix(cc,[30,36,46],.45).join(",")+",.9)";cx.beginPath();cx.ellipse(x,y+13*k,74*k,8*k,0,0,7);cx.fill()}}
   // water level from tide
   const hgt=td?clamp(td.h,-1.5,7.5):3,wl=318-(hgt+1.5)/9*110,floor=478;
   // headland
@@ -921,7 +927,11 @@ function drawScene(ts){
   for(let i=0;i<n;i++){const cr=crabs[i];if(!reduce&&score>=25){cr.x+=cr.dir*live*.9;if(cr.x>660)cr.dir=-1;if(cr.x<40)cr.dir=1}
     drawCrab(cr.x,floor-10+(score<25?9:0),t*(4+live*8)+cr.ph,score<25,day)}
   // rain
-  const rain=c.w.rain||0;if(rain>.005){cx.strokeStyle="rgba(210,225,235,.55)";cx.lineWidth=1.5;cx.beginPath();const nR=Math.min(160,30+rain*900);for(let i=0;i<nR;i++){const x=((i*73+t*240)%(W+80))-40,y=(i*41+t*640)%wl;cx.moveTo(x,y);cx.lineTo(x-6-wind*.3,y+16)}cx.stroke()}
+  const rain=c.w.rain||0;if(rain>.005){const nR=Math.round(40+storm*70),len=22+storm*12,slant=8+wind*.5;
+    cx.strokeStyle="rgba(214,230,242,"+(.55+.3*storm)+")";cx.lineWidth=2.6+storm*1.6;cx.lineCap="round";cx.beginPath();
+    for(let i=0;i<nR;i++){const x=((i*73+t*260)%(W+120))-60,y=(i*41+t*(620+storm*260))%(wl+10);cx.moveTo(x,y);cx.lineTo(x-slant*len/24,y+len)}cx.stroke();
+    // splashes where drops hit the water
+    cx.strokeStyle="rgba(235,244,250,.6)";cx.lineWidth=1.6;cx.beginPath();for(let i=0;i<10+storm*14;i++){const x=(i*157+Math.floor(t*3+i)*89)%W,ph=(t*3+i)%1,y=wl+6+wave(x,1,0);cx.moveTo(x-5*ph-2,y-6*ph);cx.lineTo(x-2,y);cx.moveTo(x+5*ph+2,y-6*ph);cx.lineTo(x+2,y)}cx.stroke()}
   if(!reduce)requestAnimationFrame(drawScene);
 }
 function drawCrab(x,y,ph,hiding,day){
