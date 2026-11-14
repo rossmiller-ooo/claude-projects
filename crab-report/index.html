@@ -416,37 +416,55 @@ function seasonInfo(site,ms){
 }
 
 /* ============================== DATA LOADING ============================== */
-const DATA={tide:{},wx:{},sea:{},alerts:{},loadedAt:0,stale:false};
-async function getJSON(url,key,maxAgeMin){
-  const c=store.get("c."+key,null);
-  if(c&&Date.now()-c.at<maxAgeMin*6e4)return c.d;
-  try{const ac=typeof AbortController!=="undefined"?new AbortController():null,tm=setTimeout(()=>ac&&ac.abort(),20000);const r=await fetch(url,ac?{signal:ac.signal}:{});clearTimeout(tm);if(!r.ok)throw new Error(r.status);const d=await r.json();store.set("c."+key,{at:Date.now(),d});return d}
-  catch(e){if(c){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);return c.d}throw e}
+/* Favorites load first so the report appears fast; the other spots follow in the background.
+   A saved forecast is shown immediately and refreshed behind the scenes. */
+const DATA={tide:{},wx:{},sea:{},alerts:{},loadedAt:0,stale:false,usedOld:false};
+const FRESH_MIN=45;
+try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.")&&!k.startsWith("crab.c.k3.")).forEach(k=>localStorage.removeItem(k))}catch(e){}
+function fetchJSON(url,ms){return new Promise((res,rej)=>{
+  const ac=typeof AbortController!=="undefined"?new AbortController():null;
+  const tm=setTimeout(()=>{if(ac)ac.abort();rej(new Error("timeout"))},ms);
+  fetch(url,ac?{signal:ac.signal}:{}).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(d=>{clearTimeout(tm);res(d)},e=>{clearTimeout(tm);rej(e)})})}
+/* mode "fresh": use the cache only if recent. mode "any": use whatever is saved (marks DATA.usedOld). */
+async function getJSON(url,key,sig,mode,what){
+  const c=store.get("c.k3."+key,null),ok=c&&c.sig===sig;
+  if(ok&&Date.now()-c.at<FRESH_MIN*6e4)return c.d;
+  if(ok&&mode==="any"&&Date.now()-c.at<36*H){DATA.usedOld=true;return c.d}
+  let err;
+  for(let i=0;i<2;i++){try{const d=await fetchJSON(url,i?15000:9000);store.set("c.k3."+key,{at:Date.now(),sig,d});return d}catch(e){err=e}}
+  if(ok){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);return c.d}
+  err.what=what;throw err;
 }
 function nearestStation(lat,lon){let b=STATIONS[0],bd=1e9;for(const s of STATIONS){const d=Math.hypot(s.lat-lat,(s.lon-lon)*.78);if(d<bd){bd=d;b=s}}return b.id}
-async function loadTide(st,now){
-  if(DATA.tide[st])return;
-  const u="https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=robs_crab_report&begin_date="+ymd(now-24*H)+"&range=312&datum=MLLW&station="+st+"&time_zone=lst_ldt&units=english&interval=hilo&format=json";
-  const j=await getJSON(u,"tide2."+st+"."+ymd(now),360);
+async function loadTide(st,now,mode){
+  const day=ymd(now-24*H);
+  const u="https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=robs_crab_report&begin_date="+day+"&range=312&datum=MLLW&station="+st+"&time_zone=lst_ldt&units=english&interval=hilo&format=json";
+  // tide predictions don't change, so a copy fetched today is always good
+  const c=store.get("c.k3.tide."+st,null);
+  let j=c&&c.sig===day?c.d:await getJSON(u,"tide."+st,day,mode,"NOAA tides");
   if(!j.predictions)throw new Error("no tide");
   DATA.tide[st]=j.predictions.map(p=>({t:parseT(p.t),v:+p.v,hi:p.type==="H"}));
 }
-async function loadAll(force){
-  const now=pacNow(),sites=allSites();
-  if(force){try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.")).forEach(k=>localStorage.removeItem(k))}catch(e){}DATA.tide={};DATA.alerts={}}
-  DATA.stale=false;
+const hasData=s=>!!(DATA.wx[s.id]&&DATA.sea[s.id]);
+async function loadSites(sites,key,mode){
+  if(!sites.length)return;
+  const now=pacNow();
   sites.forEach(s=>{s.station=s.station||nearestStation(s.lat,s.lon)});
-  const sig=sites.map(s=>s.id).join(",").length+"."+sites.length;
+  const sig=sites.map(s=>s.id+"@"+s.lat+","+s.lon).join("|");
   const lat=sites.map(s=>s.lat).join(","),lon=sites.map(s=>s.lon).join(",");
   const slat=sites.map(s=>(s.sea||s).lat).join(","),slon=sites.map(s=>(s.sea||s).lon).join(",");
   const tz="&timezone=America%2FLos_Angeles";
   const wxU="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+"&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,precipitation_probability,weather_code,cloud_cover&daily=sunrise,sunset&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch&forecast_days=11&past_days=3"+tz;
   const seaU="https://marine-api.open-meteo.com/v1/marine?latitude="+slat+"&longitude="+slon+"&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,sea_surface_temperature&length_unit=imperial&forecast_days=11&past_days=1"+tz;
-  const stations=[...new Set(sites.map(s=>s.station).concat(FALLBACK_STATION))];
+  const stations=[...new Set(sites.map(s=>s.station))];
+  let tideErr=null;
   const [wx,sea]=await Promise.all([
-    getJSON(wxU,"wx2."+sig,45),getJSON(seaU,"sea2."+sig,45),
-    ...stations.map(st=>loadTide(st,now).catch(()=>null))]);
-  if(!DATA.tide[FALLBACK_STATION]&&!Object.keys(DATA.tide).length)throw new Error("tides unavailable");
+    getJSON(wxU,"wx."+key,sig,mode,"the weather forecast"),getJSON(seaU,"sea."+key,sig,mode,"the swell forecast"),
+    ...stations.map(st=>loadTide(st,now,mode).catch(e=>{tideErr=e}))]);
+  if(stations.some(st=>!DATA.tide[st])){
+    await loadTide(FALLBACK_STATION,now,mode).catch(()=>{});
+    if(!DATA.tide[FALLBACK_STATION]){const e=tideErr||new Error("tides");e.what="NOAA tides";throw e}
+  }
   const arr=x=>Array.isArray(x)?x:[x];
   arr(wx).forEach((w,i)=>{const s=sites[i];if(!s||!w.hourly)return;const m=new Map(),h=w.hourly;
     h.time.forEach((t,k)=>m.set(t,{temp:h.temperature_2m[k],wind:h.wind_speed_10m[k],gust:h.wind_gusts_10m[k],wdir:h.wind_direction_10m[k],rain:h.precipitation[k]||0,pop:h.precipitation_probability[k],code:h.weather_code[k],cloud:h.cloud_cover[k]}));
@@ -454,11 +472,11 @@ async function loadAll(force){
   arr(sea).forEach((w,i)=>{const s=sites[i];if(!s||!w.hourly)return;const m=new Map(),h=w.hourly,c=(w.hourly_units||{}).sea_surface_temperature!=="°F";
     h.time.forEach((t,k)=>m.set(t,{wave:h.wave_height[k],per:h.wave_period[k],dir:h.wave_direction[k],swell:h.swell_wave_height[k],sper:h.swell_wave_period[k],sst:h.sea_surface_temperature[k]==null?null:(c?h.sea_surface_temperature[k]*9/5+32:h.sea_surface_temperature[k])}));
     DATA.sea[s.id]=m});
-  DATA.loadedAt=now;
 }
+const firstSites=()=>{const l=allSites().filter(s=>favs.has(s.id));return l.length?l:[siteById(current)||SITES[0]]};
 async function loadAlerts(site){
   if(DATA.alerts[site.id])return DATA.alerts[site.id];
-  try{const j=await getJSON("https://api.weather.gov/alerts/active?point="+site.lat.toFixed(3)+","+site.lon.toFixed(3),"al."+site.id,20);
+  try{const j=await getJSON("https://api.weather.gov/alerts/active?point="+site.lat.toFixed(3)+","+site.lon.toFixed(3),"al."+site.id,"1","fresh","alerts");
     DATA.alerts[site.id]=(j.features||[]).map(f=>f.properties).filter(p=>/surf|beach|wind|gale|craft|storm|tsunami|flood|rip|sneaker|sea|marine|fog/i.test(p.event))}
   catch(e){DATA.alerts[site.id]=[]}
   return DATA.alerts[site.id];
@@ -581,8 +599,10 @@ function gaugeSVG(sc,g){
 }
 function renderToday(){
   const site=siteById(current);if(!site||!DATA.loadedAt)return;
+  if(!hasData(site)){$("today").hidden=true;setStatus("fair","<span>Hauling in the forecast for "+esc(site.name)+"…</span>");
+    (DATA.restP||Promise.resolve()).then(()=>hasData(site)?null:loadSites([site],"one."+site.id,"any")).then(()=>{if(current===site.id&&hasData(site))renderToday()},e=>{if(current===site.id)setStatus("bad","<b>No signal.</b> <span>Couldn't reach "+(e.what||"the forecast services")+". Tap Refresh.</span>")});return}
   const now=pacNow(),t=viewOffset?Math.floor(now/H)*H+viewOffset*H:now,c=cond(site,t),g=grade(c.score);
-  $("status").hidden=true;$("today").hidden=false;
+  if(!DATA.stale)$("status").hidden=true;$("today").hidden=false;
   $("sceneWhere").textContent=site.name;
   $("sceneWhen").textContent=viewOffset?fmtDay(t,now)+" "+fmtTime(t):"Now · "+fmtTime(now);
   $("scrubLbl").textContent=viewOffset?"+"+viewOffset+" hr":"Now";
@@ -699,7 +719,7 @@ $("nowBtn").addEventListener("click",()=>{viewOffset=0;$("scrub").value=0;render
 /* ============================== RENDER: SPOTS ============================== */
 function renderSpots(){
   const el=$("tab-spots"),now=pacNow(),ready=!!DATA.loadedAt;
-  const rows=allSites().map(s=>{const c=ready?cond(s,now):null;const w=ready?bestWindows(s,now,36,1)[0]:null;return{s,c,w}});
+  const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w}});
   rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||((b.w?b.w.score:b.c?b.c.score:0)-(a.w?a.w.score:a.c?a.c.score:0)));
   const bet=ready?rows.filter(r=>!favs.has(r.s.id)&&r.w&&!r.s.custom&&!r.s.advisory).sort((a,b)=>b.w.score-a.w.score)[0]:null;
   const favBest=ready?Math.max(0,...rows.filter(r=>favs.has(r.s.id)&&r.w).map(r=>r.w.score)):0;
@@ -716,7 +736,7 @@ function renderSpots(){
   $("spotForm").addEventListener("submit",e=>{e.preventDefault();const lat=parseFloat($("sLat").value),lon=parseFloat($("sLon").value);
     if(!(lat>32&&lat<43&&lon<-116&&lon>-126)){toast("That doesn't look like the California coast. Check the numbers.");return}
     const ex=+$("sKind").value,s={id:"c"+Date.now(),name:$("sName").value.trim(),short:$("sName").value.trim(),lat,lon,exposure:ex,fresh:ex<.5?.4:0,current:1,gear:ex===1?["snare"]:["snare","hoop"],kind:"Your spot",custom:true};
-    custom.push(s);store.set("custom",custom);favs.add(s.id);store.set("favs",[...favs]);fillSpotSelect();toast("Spot added. Loading its forecast…");boot(false).then(()=>selectSite(s.id))});
+    custom.push(s);store.set("custom",custom);favs.add(s.id);store.set("favs",[...favs]);fillSpotSelect();toast("Spot added. Loading its forecast…");selectSite(s.id)});
   $("sHere").addEventListener("click",()=>{if(!navigator.geolocation){toast("Location isn't available on this device.");return}navigator.geolocation.getCurrentPosition(p=>{$("sLat").value=p.coords.latitude.toFixed(4);$("sLon").value=p.coords.longitude.toFixed(4)},()=>toast("Couldn't get your location. Type it in instead."))});
 }
 
@@ -853,13 +873,30 @@ function showTab(name){["today","spots","log","rules"].forEach(t=>{$("tab-"+t).h
 document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){showTab(b.dataset.tab);window.scrollTo(0,0)}});
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 let animStarted=false;
+let bootRun=0;
+function setStatus(cls,html){$("status").hidden=false;$("status").className="alert "+cls;$("status").innerHTML="<div>"+html+"</div>"}
+function paint(){$("mastSub").textContent=fmtDate(pacNow())+" · Shore crabbing forecast";renderToday();if(!$("tab-spots").hidden)renderSpots();
+  if(!animStarted){animStarted=true;requestAnimationFrame(drawScene)}else if(reduce)drawScene(0)}
 async function boot(force){
-  try{await loadAll(force);
-    $("mastSub").textContent=fmtDate(pacNow())+" · Shore crabbing forecast";
-    renderToday();if(!$("tab-spots").hidden)renderSpots();
-    if(DATA.stale){$("status").hidden=false;$("status").className="alert fair";$("status").innerHTML="<div><b>Offline.</b> <span>Showing the forecast saved "+Math.round(DATA.stale/6e4)+" minutes ago.</span></div>"}
-    if(!animStarted){animStarted=true;requestAnimationFrame(drawScene)}else if(reduce)drawScene(0);
-  }catch(e){$("today").hidden=true;$("status").hidden=false;$("status").className="alert bad";$("status").innerHTML='<div><b>No signal.</b> <span>Couldn\'t reach the tide and weather services. Check your connection and tap Refresh.</span></div>'}
+  const run=++bootRun,first=firstSites(),rest=allSites().filter(s=>!first.includes(s));
+  if(force){try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.k3.")).forEach(k=>localStorage.removeItem(k))}catch(e){}DATA.alerts={}}
+  DATA.stale=false;DATA.usedOld=false;
+  const slow=setTimeout(()=>{if(run===bootRun&&!DATA.loadedAt)setStatus("fair","<b>Still hauling.</b> <span>The tide and weather services are slow to answer. Hang on a few seconds.</span>")},5000);
+  try{
+    await loadSites(first,"fav","any");if(run!==bootRun)return;
+    DATA.loadedAt=pacNow();
+    // the remaining spots load quietly for the Spots tab
+    DATA.restP=rest.length?loadSites(rest,"rest","any").then(()=>{if(run===bootRun&&!$("tab-spots").hidden)renderSpots()},()=>{}):Promise.resolve();
+    paint();
+    if(DATA.usedOld){DATA.usedOld=false;await loadSites(first,"fav","fresh");if(run!==bootRun)return;DATA.loadedAt=pacNow();paint()}
+    if(DATA.stale)setStatus("fair","<b>Offline.</b> <span>Showing the forecast saved "+(DATA.stale>2*H?Math.round(DATA.stale/H)+" hours":Math.round(DATA.stale/6e4)+" minutes")+" ago. Tap Refresh to try again.</span>");
+  }catch(e){
+    if(run!==bootRun)return;
+    if(DATA.loadedAt){setStatus("fair","<b>Couldn't update.</b> <span>Showing the last forecast that loaded. Tap Refresh to try again.</span>")}
+    else{$("today").hidden=true;setStatus("bad","<b>No signal.</b> <span>Couldn't reach "+(e.what||"the tide and weather services")+". Check your connection and tap Refresh.</span>")}
+  }finally{clearTimeout(slow)}
+  if(rest.length&&DATA.loadedAt&&run===bootRun){await DATA.restP;
+    if(DATA.usedOld&&run===bootRun){DATA.usedOld=false;try{await loadSites(rest,"rest","fresh");if(run===bootRun){if(!$("tab-spots").hidden)renderSpots();const c=siteById(current);if(c&&!first.includes(c)&&!$("tab-today").hidden&&!viewOffset)renderToday()}}catch(e){}}}
 }
 $("refresh").addEventListener("click",()=>{toast("Refreshing…");boot(true)});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
