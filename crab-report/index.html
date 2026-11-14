@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rob's Crab Report</title>
+<meta name="description" content="Shore crabbing forecast, spots and catch log for the Northern California coast.">
+<meta name="theme-color" content="#12304a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Crab Report">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Zilla+Slab:ital,wght@0,600;0,700;1,500&display=swap">
+<style>
+/* Layout: one column "chart table" — scene + verdict on top, instruments below, bottom tab bar. */
+:root{
+  --water:#dfecf0;        /* chart shallow-water blue: page ground */
+  --card:#fbfcfa;         /* chart paper */
+  --ink:#12304a;          /* navy chart ink */
+  --ink2:#4b6577;         /* secondary ink */
+  --line:#b9ccd6;         /* sounding lines */
+  --land:#ead9a4;         /* chart land buff */
+  --land-ink:#5a4a14;
+  --magenta:#a8246f;      /* chart magenta: nav aids, active state */
+  --good:#1f7a4d; --fair:#a86a00; --bad:#b3261e;
+  --good-bg:#dcefe3; --fair-bg:#f6e7c4; --bad-bg:#f6d9d5;
+  --deep:#12304a; --deep-ink:#f2f6f8;
+  --f-display:"Zilla Slab",Rockwell,Georgia,serif;
+  --f-body:"Barlow","Helvetica Neue",Arial,sans-serif;
+  --f-data:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --water:#0a1a28; --card:#11283a; --ink:#e1ecf1; --ink2:#9db4c2; --line:#2a465a;
+  --land:#3d3618; --land-ink:#ecdca4; --magenta:#f07fc0;
+  --good:#63d39a; --fair:#f0bd5a; --bad:#ff8a80;
+  --good-bg:#123a28; --fair-bg:#40300c; --bad-bg:#4a1c18;
+  --deep:#06121c; --deep-ink:#e1ecf1; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--water);color:var(--ink);font:17px/1.45 var(--f-body);
+  padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+[hidden]{display:none!important}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.15}
+h2{font-size:1.35rem} h3{font-size:1.1rem}
+p{margin:0}
+a{color:var(--magenta)}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.lbl{font:600 .78rem/1.2 var(--f-data);letter-spacing:.09em;text-transform:uppercase;color:var(--ink2)}
+.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+
+/* masthead */
+.mast{background:var(--deep);color:var(--deep-ink);padding-top:env(safe-area-inset-top,0px)}
+.mast .wrap{display:flex;align-items:center;gap:12px;padding-block:12px}
+.mast svg{flex:none}
+.mast h1{font-size:1.5rem}
+.mast .sub{font:500 .85rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.8}
+.mast .refresh{margin-left:auto;background:none;border:1.5px solid rgba(255,255,255,.35);color:inherit;border-radius:8px;padding:8px 12px;font:600 .85rem var(--f-data);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+
+/* spot picker */
+.picker{display:flex;gap:8px;overflow-x:auto;padding-block:12px;scrollbar-width:none}
+.picker::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid var(--ink);background:var(--card);border-radius:999px;padding:9px 15px;font-weight:600;cursor:pointer;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.chip.more{border-style:dashed;color:var(--ink2);border-color:var(--ink2)}
+.chip .st{color:var(--magenta);margin-right:4px}
+.chip[aria-pressed="true"] .st{color:inherit}
+
+main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card>h2{margin-bottom:10px}
+
+/* scene */
+.scene{position:relative;border-radius:10px;overflow:hidden;border:2px solid var(--ink);background:#7fb6cf}
+.scene canvas{display:block;width:100%;aspect-ratio:16/9;max-height:400px}
+.scene .where{position:absolute;left:12px;top:10px;font:italic 500 1.05rem var(--f-display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.scene .when{position:absolute;right:12px;top:10px;font:600 .95rem var(--f-data);letter-spacing:.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);text-transform:uppercase}
+.scrub{display:flex;align-items:center;gap:10px;margin-top:8px}
+.scrub input{flex:1;min-width:0;accent-color:var(--magenta);height:32px}
+.scrub button{flex:none;border:1.5px solid var(--ink);background:var(--card);border-radius:8px;padding:6px 12px;font:600 .85rem var(--f-data);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+
+/* verdict */
+.verdict{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
+.verdict .word{font:700 2rem/1 var(--f-display)}
+.verdict .why{margin-top:6px;color:var(--ink2)}
+.gauge text{font-family:var(--f-data);fill:var(--ink)}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font:700 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
+.t-good{color:var(--good)} .t-fair{color:var(--fair)} .t-bad{color:var(--bad)}
+.b-good{background:var(--good-bg);color:var(--good)} .b-fair{background:var(--fair-bg);color:var(--fair)} .b-bad{background:var(--bad-bg);color:var(--bad)}
+@media (max-width:480px){.verdict{grid-template-columns:110px 1fr;gap:12px}.verdict .word{font-size:1.6rem}}
+
+.alert{border-radius:10px;padding:12px 14px;font-weight:500;display:flex;gap:10px;align-items:flex-start}
+.alert b{font-family:var(--f-data);letter-spacing:.06em;text-transform:uppercase}
+.alert.bad{background:var(--bad-bg);color:var(--bad);border:1.5px solid var(--bad)}
+.alert.fair{background:var(--fair-bg);color:var(--fair);border:1.5px solid var(--fair)}
+.alert.good{background:var(--good-bg);color:var(--good);border:1.5px solid var(--good)}
+.alert span{color:var(--ink)}
+
+/* instruments */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.inst{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px;min-width:0;border-top:5px solid var(--line)}
+.inst.good{border-top-color:var(--good)} .inst.fair{border-top-color:var(--fair)} .inst.bad{border-top-color:var(--bad)}
+.inst .v{font:700 1.7rem/1.1 var(--f-data);font-variant-numeric:tabular-nums;margin-top:4px}
+.inst .v small{font-size:.95rem;font-weight:600;color:var(--ink2)}
+.inst .d{font-size:.88rem;color:var(--ink2);margin-top:3px}
+
+.chartbox{overflow-x:auto}
+.chartbox svg{display:block;width:100%;min-width:560px;height:auto}
+.chartbox text{font-family:var(--f-data);fill:var(--ink2);font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--ink2);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:baseline}
+
+.windows{display:flex;flex-direction:column;gap:8px}
+.win{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:center;padding:10px;border:1.5px solid var(--line);border-radius:8px}
+.win .sc{font:700 1.5rem/1 var(--f-data);text-align:center;border-radius:8px;padding:9px 0}
+.win .t{font-weight:600}
+.win .n{font-size:.9rem;color:var(--ink2)}
+
+.days{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.day{text-align:center;border:1.5px solid var(--line);border-radius:8px;padding:8px 2px;min-width:0}
+.day .bar{height:54px;display:flex;align-items:flex-end;justify-content:center;margin:6px 0}
+.day .bar i{display:block;width:60%;border-radius:4px 4px 0 0}
+.day .s{font:700 1.15rem var(--f-data)}
+.day .n{font-size:.75rem;color:var(--ink2);line-height:1.2}
+
+.gear{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.gear>div{border:1.5px solid var(--line);border-radius:8px;padding:12px}
+.gear h3{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink);background:var(--card);color:var(--ink);border-radius:8px;padding:10px 14px;font-weight:600;text-decoration:none;cursor:pointer}
+.btn.primary{background:var(--magenta);border-color:var(--magenta);color:#fff}
+@media (prefers-color-scheme:dark){.btn.primary{color:#1a0611}}
+.btn.small{padding:6px 10px;font-size:.9rem}
+
+/* spots */
+.spot{display:grid;grid-template-columns:58px 1fr auto;gap:12px;align-items:start}
+.spot .sc{font:700 1.6rem/1 var(--f-data);text-align:center;border-radius:8px;padding:10px 0}
+.spot .sc small{display:block;font-size:.62rem;letter-spacing:.08em;margin-top:3px}
+.spot h3 button{all:unset;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.spot .meta{font:600 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase;color:var(--ink2);margin:2px 0 6px}
+.spot .blurb{font-size:.95rem}
+.spot .btns{margin-top:10px}
+.star{all:unset;cursor:pointer;font-size:1.9rem;line-height:1;color:var(--line);padding:2px 6px}
+.star[aria-pressed="true"]{color:var(--magenta)}
+.fav{background:linear-gradient(0deg,var(--card),var(--card)) padding-box;border-color:var(--land-ink);box-shadow:inset 6px 0 0 var(--land)}
+.bet{background:var(--land);color:var(--land-ink);border-radius:10px;padding:14px 16px}
+.bet h2{color:inherit;margin-bottom:4px}
+.bet .btn{margin-top:10px}
+
+/* forms / log */
+form.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+form.f label{display:flex;flex-direction:column;gap:4px;min-width:0}
+form.f .wide{grid-column:1/-1}
+input,select,textarea{background:var(--water);border:1.5px solid var(--line);border-radius:8px;padding:10px;width:100%;min-width:0}
+textarea{min-height:70px;resize:vertical}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.entry{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:start;padding:12px 0;border-top:1.5px solid var(--line)}
+.entry:first-child{border-top:0}
+.entry .k{font:700 1.8rem/1 var(--f-data);text-align:center}
+.entry .k small{display:block;font-size:.65rem;letter-spacing:.08em;color:var(--ink2);margin-top:3px}
+.entry .n{font-size:.92rem;color:var(--ink2)}
+.del{all:unset;cursor:pointer;color:var(--ink2);font-size:.85rem;text-decoration:underline}
+table.t{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font:600 .78rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+table.t th,table.t td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line)}
+.rules dt{font-weight:700;margin-top:12px} .rules dd{margin:2px 0 0}
+.fine{font-size:.85rem;color:var(--ink2)}
+.empty{color:var(--ink2);font-style:italic}
+
+/* tab bar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--deep);z-index:20;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs div{max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{all:unset;cursor:pointer;text-align:center;color:var(--deep-ink);opacity:.65;padding:9px 0 8px;font:600 .82rem var(--f-data);letter-spacing:.09em;text-transform:uppercase}
+nav.tabs button svg{display:block;margin:0 auto 3px}
+nav.tabs button[aria-selected="true"]{opacity:1;box-shadow:inset 0 3px 0 var(--land)}
+nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:8px;font-weight:600;z-index:30}
+</style>
+</head>
+<body>
+<header class="mast"><div class="wrap">
+  <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#e0489e"/></svg>
+  <div><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Northern California</div></div>
+  <button class="refresh" id="refresh" type="button">Refresh</button>
+</div></header>
+
+<main class="wrap">
+  <div class="picker" id="picker" role="group" aria-label="Choose a spot"></div>
+
+  <section id="tab-today">
+    <div id="status" class="alert fair"><span>Hauling in tides, swell and weather…</span></div>
+    <div id="today" hidden style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <div class="scene">
+          <canvas id="scene" width="960" height="540" role="img" aria-label="Animated view of the water at this spot"></canvas>
+          <div class="where" id="sceneWhere"></div><div class="when" id="sceneWhen"></div>
+        </div>
+        <div class="scrub">
+          <button type="button" id="nowBtn">Now</button>
+          <input type="range" id="scrub" min="0" max="72" value="0" step="1" aria-label="Look ahead, hours from now">
+          <span class="num lbl" id="scrubLbl" style="min-width:74px;text-align:right">Now</span>
+        </div>
+      </div>
+
+      <div class="card verdict">
+        <svg class="gauge" id="gauge" viewBox="0 0 200 128" role="img"></svg>
+        <div><div class="lbl" id="vLbl">Crabbing outlook</div><div class="word" id="vWord"></div><p class="why" id="vWhy"></p></div>
+      </div>
+
+      <div id="alerts" style="display:flex;flex-direction:column;gap:8px"></div>
+
+      <div class="grid" id="inst"></div>
+
+      <div class="card"><h2>Best times to go</h2><div class="windows" id="windows"></div>
+        <div class="lbl" style="margin:14px 0 8px">Next five days — best score each day</div><div class="days" id="days"></div></div>
+
+      <div class="card"><h2>Tide &amp; crabbing score, next 48 hours</h2>
+        <div class="chartbox"><svg id="tideChart" viewBox="0 0 720 250" role="img" aria-label="Tide height and crabbing score for the next 48 hours"></svg></div>
+        <div class="legend"><span><i style="background:var(--ink)"></i>Tide height (ft, MLLW)</span><span><i style="background:var(--good-bg);border:1px solid var(--good)"></i>Good crabbing window</span><span><i style="background:var(--line)"></i>Night</span></div>
+      </div>
+
+      <div class="card"><h2>What to bring</h2><div class="gear" id="gear"></div></div>
+
+      <div class="card" id="spotCard"></div>
+    </div>
+  </section>
+
+  <section id="tab-spots" hidden></section>
+
+  <section id="tab-log" hidden>
+    <div class="card"><h2>Log a catch</h2>
+      <form class="f" id="logForm">
+        <label><span class="lbl">When</span><input type="datetime-local" id="lWhen" required></label>
+        <label><span class="lbl">Spot</span><select id="lSpot"></select></label>
+        <label><span class="lbl">Gear</span><select id="lGear"><option>Rod &amp; snare</option><option>Hoop net</option><option>Both</option></select></label>
+        <label><span class="lbl">Keepers</span><input type="number" id="lKeep" min="0" max="10" inputmode="numeric" value="0" required></label>
+        <label><span class="lbl">Thrown back</span><input type="number" id="lRel" min="0" inputmode="numeric" value="0"></label>
+        <label><span class="lbl">Biggest (inches)</span><input type="number" id="lBig" min="0" max="12" step="0.25" inputmode="decimal" placeholder="6.5"></label>
+        <label><span class="lbl">Bait</span><input type="text" id="lBait" placeholder="Squid, chicken, mackerel…"></label>
+        <label><span class="lbl">Hours fished</span><input type="number" id="lHrs" min="0" step="0.5" inputmode="decimal" placeholder="3"></label>
+        <label class="wide"><span class="lbl">Notes</span><textarea id="lNotes" placeholder="Where exactly, what worked, who came along…"></textarea></label>
+        <div class="wide btns"><button class="btn primary" type="submit">Save to log</button><span class="fine" id="logHint" style="align-self:center">Conditions at that time are saved with the entry automatically.</span></div>
+      </form>
+    </div>
+    <div class="stats" id="logStats"></div>
+    <div class="card" id="logPatterns" hidden></div>
+    <div class="card"><h2>Logbook</h2><div id="logList"></div>
+      <div class="btns" style="margin-top:14px"><button class="btn small" id="expCsv" type="button">Download spreadsheet (CSV)</button><button class="btn small" id="expJson" type="button">Back up log</button><label class="btn small" style="cursor:pointer">Restore backup<input type="file" id="impJson" accept="application/json,.json" hidden></label></div>
+      <p class="fine" style="margin-top:8px">The log is stored on this device only. Back it up now and then, or before switching phones.</p>
+    </div>
+  </section>
+
+  <section id="tab-rules" hidden></section>
+</main>
+
+<nav class="tabs" aria-label="Sections"><div role="tablist">
+  <button role="tab" data-tab="today" aria-selected="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 21c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/><circle cx="12" cy="7" r="3.5"/></svg>Today</button>
+  <button role="tab" data-tab="spots" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7 7-12a7 7 0 10-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>Spots</button>
+  <button role="tab" data-tab="log" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h12a2 2 0 012 2v16H7a2 2 0 01-2-2zM9 8h6M9 12h6M9 16h3"/></svg>Log</button>
+  <button role="tab" data-tab="rules" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 7v10h16V7M8 7v4M12 7v6M16 7v4"/></svg>Rules</button>
+</div></nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ============================== SPOT DATA ============================== */
+/* exposure: how much open-ocean swell reaches the water you fish (0 = inner harbor, 1 = open surf)
+   fresh: how much rain runoff hurts the spot (bays and river mouths)
+   current: how hard the tide runs there (bay mouths and channels rip) */
+//SITES-BEGIN
+const DA_NOTE="Closed to Dungeness by a domoic acid health order as of early November 2026. Check CDFW's in-season page before driving up.";
+const SITES=[
+ {id:"lawsons",fav:true,name:"Lawson's Landing",short:"Lawson's Landing",region:"Dillon Beach",kind:"Bay mouth · sand beach",lat:38.2310,lon:-122.9675,sea:{lat:38.24,lon:-123.02},station:"9415469",exposure:.35,fresh:.5,current:1.25,gear:["snare"],dayOnly:true,
+  blurb:"Cast snares from the sand into the channel at the mouth of Tomales Bay. The current here is fierce on big tides, so the slack windows matter more than anywhere else.",
+  tips:["Fish the last two hours of the incoming tide through high slack.","The bar gets rough when the tide turns in the afternoon. Pick small-swing (neap) days when you can.","Squid in the snare's bait cage is the local standard.","The old pier is gone. This is a rod-and-snare spot now."],
+  access:"Private campground with a day-use fee at the gate. Call (707) 878-2443 for gate hours and the fee.",buzz:"Lawson's own report: shore snarers took a fair number after the opener last season, slowing by January.",link:["Lawson's fishing report","https://fishlawsons.blogspot.com/"]},
+ {id:"doran",fav:true,name:"Bodega Harbor · Doran Jetty",short:"Bodega Harbor",region:"Bodega Bay",kind:"Harbor mouth · jetty",lat:38.3060,lon:-123.0500,sea:{lat:38.29,lon:-123.06},station:"9415625",exposure:.4,fresh:.2,current:1.1,gear:["snare","hoop"],dayOnly:true,
+  blurb:"The best-known shore spot in Bodega Bay. Walk out the south jetty at Doran Regional Park and fish the harbor channel side.",
+  tips:["Cast snares into the channel. Drop a hoop net off the rocks where there is a clean, deep edge.","Harbor seals steal bait here. A bait cage beats loose bait.","Jetty rocks are slick. Wear boots with grip and stay off them in big swell."],
+  access:"Doran Regional Park, $7 parking, open sunrise to sunset.",link:["Sonoma County Parks fishing","https://parks.sonomacounty.ca.gov/play/fishing"]},
+ {id:"spud",name:"Spud Point Marina Pier",short:"Spud Point Pier",region:"Bodega Bay",kind:"Inner harbor · public pier",lat:38.3290,lon:-123.0580,sea:{lat:38.29,lon:-123.06},station:"9415625",exposure:.08,fresh:.35,current:.7,gear:["hoop"],
+  blurb:"The easy one for hoop nets: a public pier in the sheltered inner harbor. Fishable when the ocean is too rough for anything else. Expect more rock crab than Dungeness.",
+  tips:["Two hoop nets per person on a public pier. No license needed.","High tide brings the most water and the most crab under the pier.","The county parks department teaches crabbing classes from this pier."],
+  access:"Free. Westshore Road, across from Spud Point Crab Company.",link:["Sonoma County Parks fishing","https://parks.sonomacounty.ca.gov/play/fishing"]},
+ {id:"campbell",name:"Campbell Cove · North Jetty",short:"Campbell Cove",region:"Bodega Bay",kind:"Harbor mouth · cove & jetty",lat:38.3050,lon:-123.0580,sea:{lat:38.29,lon:-123.06},station:"9415625",exposure:.35,fresh:.2,current:1.1,gear:["snare","hoop"],
+  blurb:"The Bodega Head side of the harbor mouth, across the channel from Doran. Same crab, fewer people, and tucked out of a northwest wind.",
+  tips:["Cast toward the channel from the cove beach or the base of the north jetty.","A good fallback when Doran is crowded."],access:"State Parks lot at the end of Westshore Road."},
+ {id:"westside",name:"Westside Regional Park",short:"Westside Park",region:"Bodega Bay",kind:"Inner harbor · shoreline",lat:38.3230,lon:-123.0570,sea:{lat:38.29,lon:-123.06},station:"9415625",exposure:.08,fresh:.35,current:.7,gear:["snare","hoop"],
+  blurb:"Sheltered inner-harbor shoreline. Mostly rock crab, but a calm place to fish when wind and swell shut down the jetties.",
+  tips:["Fish from the shore only. Crabbing from the boat docks is not allowed."],access:"$7 parking."},
+ {id:"doranbeach",name:"Doran Beach (surf side)",short:"Doran Beach",region:"Bodega Bay",kind:"Protected surf beach",lat:38.3130,lon:-123.0400,sea:{lat:38.29,lon:-123.04},station:"9415625",exposure:.6,fresh:.1,current:.6,gear:["snare"],dayOnly:true,
+  blurb:"Two miles of gently sloping sand that Bodega Head shields from northwest swell. One of the easier beaches on this coast to throw a snare from.",
+  tips:["Wade to your knees and cast past the breakers.","Works best on a small, clean swell."],access:"Doran Regional Park, $7 parking, sunrise to sunset."},
+ {id:"dillon",name:"Dillon Beach",short:"Dillon Beach",region:"Marin coast",kind:"Open surf beach",lat:38.2500,lon:-122.9660,sea:{lat:38.25,lon:-123.02},station:"9415469",exposure:.9,fresh:.1,current:.7,gear:["snare"],
+  blurb:"A mile and a half of open beach running south to Lawson's. Surf snaring when the swell is down.",
+  tips:["Walk south toward the bay mouth for deeper water close in.","Needs a small swell day."],access:"Paid private parking lot at the beach."},
+ {id:"stinson",name:"Stinson Beach",short:"Stinson Beach",region:"Marin coast",kind:"Open surf beach",lat:37.8980,lon:-122.6440,sea:{lat:37.87,lon:-122.66},station:"9414275",exposure:.8,fresh:.1,current:.6,gear:["snare"],dayOnly:true,
+  blurb:"Locals snare Dungeness from the sand here on calm days, especially toward the Bolinas Lagoon channel at the north end.",
+  tips:["Calm days only.","The north end near the lagoon mouth holds the most crab."],access:"National Park lot. Gates close at sunset."},
+ {id:"baker",name:"Baker Beach",short:"Baker Beach",region:"San Francisco",kind:"Surf beach",lat:37.7940,lon:-122.4840,sea:{lat:37.79,lon:-122.53},station:"9414290",exposure:.7,fresh:.1,current:1.1,gear:["snare"],
+  blurb:"A well-known snare beach just outside the Golden Gate, where Dungeness are legal to keep. Steep sand puts deep water within casting range.",
+  tips:["Strong tidal current sweeps the beach. Fish near slack.","Stay west of the bridge: Dungeness cannot be kept inside San Francisco Bay."]},
+ {id:"oceanbeach",name:"Ocean Beach",short:"Ocean Beach",region:"San Francisco",kind:"Open surf beach",lat:37.7600,lon:-122.5110,sea:{lat:37.76,lon:-122.56},station:"9414275",exposure:1,fresh:0,current:.7,gear:["snare"],
+  blurb:"Miles of open sand and the Bay Area's most popular surf-snaring beach. Good numbers when the swell lies down, unfishable when it doesn't.",
+  tips:["Needs small surf. Rip currents here are serious.","Long casts past the outer bar do best."],link:["Shore snare reports","https://www.fishsniffer.com/durasnare"]},
+ {id:"pacifica",name:"Pacifica Municipal Pier",short:"Pacifica Pier",region:"San Mateo coast",kind:"Ocean pier",lat:37.6335,lon:-122.4975,sea:{lat:37.63,lon:-122.53},station:"9414275",exposure:.75,fresh:0,current:.6,gear:["snare","hoop"],
+  blurb:"The most famous Dungeness pier in California. Free, no license, and it reaches real crab water. Crowded on the opener and on weekends.",
+  tips:["High tide and calm seas are best.","Snares outfish hoop nets here. Nets snag on the bottom and sea lions rob them.","Squid plus an oily fish (sardine, anchovy, mackerel).","Two rods or nets per person on a public pier."],
+  buzz:"Had a strong opener last season, per shore-fishing reports.",link:["Pier report","https://pierfishing.com/pacifica-pier/5"]},
+ {id:"pillar",name:"Pillar Point Harbor",short:"Pillar Point",region:"Half Moon Bay",kind:"Harbor · pier & jetties",lat:37.5020,lon:-122.4810,sea:{lat:37.48,lon:-122.50},station:"9414131",exposure:.3,fresh:.15,current:.6,gear:["snare","hoop"],
+  blurb:"A small public pier inside the harbor for hoop nets, plus jetties for snares. Sheltered enough to fish on days the open coast is blown out.",
+  tips:["Pier: no license needed. Jetties: license required.","Cast snares from the outer jetties toward open water."]},
+ {id:"nicks",name:"Tomales Bay · Miller Launch & Nick's Cove",short:"Tomales Bay",region:"Tomales Bay",kind:"Inner bay · launch & pier",lat:38.1990,lon:-122.9220,sea:{lat:38.24,lon:-123.02},station:"9415396",exposure:.03,fresh:.9,current:.9,gear:["snare","hoop"],
+  blurb:"Flat calm and pretty, but slow for Dungeness from shore. Most keepers in the bay come from boats nearer the mouth. Better as a scenic backup than a first choice.",
+  tips:["Fish the top of the incoming tide, when ocean water pushes this far up the bay.","Runoff after rain shuts it down fast."],access:"Miller Boat Launch is a county park. Nick's Cove pier is privately managed, so a license is required."},
+ {id:"arena",name:"Point Arena Pier",short:"Point Arena Pier",region:"Mendocino coast",kind:"Ocean cove · public pier",lat:38.9140,lon:-123.7110,sea:{lat:38.91,lon:-123.74},station:"9416841",exposure:.55,fresh:0,current:.5,gear:["hoop","snare"],
+  blurb:"A tall public pier over deep water at Arena Cove. A classic hoop-net drop with no license needed, and the season here runs a month longer (to July 30).",
+  tips:["Bring plenty of rope. It's a long way down.","Two nets per person."]},
+ {id:"noyo",name:"Noyo Harbor Jetty",short:"Noyo Harbor",region:"Fort Bragg",kind:"River mouth · jetty & beach",lat:39.4280,lon:-123.8080,sea:{lat:39.43,lon:-123.84},station:"9417426",exposure:.4,fresh:.6,current:1,gear:["hoop","snare"],
+  blurb:"Noyo River mouth in Fort Bragg. Fish the jetty and the beach beside it. Open this season, though the domoic acid closure line sits only a few miles north.",
+  tips:["Fish the incoming tide as clean ocean water pushes into the river mouth.","Heavy rain turns the river brown and pushes crab out."]},
+ {id:"eureka",name:"Eureka · Del Norte Street Pier",short:"Eureka Pier",region:"Humboldt Bay",kind:"Bay · public pier",lat:40.7890,lon:-124.1850,sea:{lat:40.77,lon:-124.28},station:"9418767",exposure:.03,fresh:.5,current:.9,gear:["hoop"],advisory:DA_NOTE,
+  blurb:"License-free public pier on Humboldt Bay and a local favorite for crab rings."},
+ {id:"trinidad",name:"Trinidad Pier",short:"Trinidad Pier",region:"Humboldt coast",kind:"Ocean cove · pier",lat:41.0560,lon:-124.1470,sea:{lat:41.04,lon:-124.17},station:"9418767",exposure:.35,fresh:0,current:.4,gear:["hoop"],advisory:DA_NOTE,
+  blurb:"A sheltered cove pier under Trinidad Head. A fishing license is required here."},
+ {id:"crescent",name:"Crescent City · B Street Pier",short:"Crescent City",region:"Del Norte coast",kind:"Harbor · public pier",lat:41.7440,lon:-124.1960,sea:{lat:41.72,lon:-124.22},station:"9419750",exposure:.3,fresh:.15,current:.5,gear:["hoop"],
+  blurb:"The far-north option: a long public pier in Crescent City harbor with a reputation for year-round crab. Open this season, license-free, and open to July 30.",
+  tips:["Pier regulars report it fishes better toward low tide, the reverse of most spots.","The North Jetty nearby is also heavily crabbed."],link:["Pier report","https://www.pierfishing.com/b-street-pier-aka-michael-j-scavuzzo-pier-crescent-city/3/"]}
+];
+const RULES={lineLat:38.77,size:"5¾ inches",bait:"squid is the snare favorite. Add an oily fish (sardine, anchovy, mackerel) or chicken for hoop nets.",notices:[],
+ asOf:"Summarized from California Department of Fish and Wildlife rules and notices as of November 14, 2026. Closures and health advisories change during the season, so check the links below before a trip.",
+ hotline:"By phone: CDFW domoic acid fishery line (831) 649-2883 · CDPH shellfish information line (800) 553-4133.",
+ items:[
+  ["This season (2026–27)","Opened November 7, 2026. <b>Crab traps are banned</b> for sport crabbers from the Oregon border to Point Conception until at least January 1, 2027, to protect humpback whales. <b>Snares and hoop nets are still legal</b>, so Rob's gear is fine."],
+  ["Domoic acid closures","As of early November 2026, Dungeness is closed by health order on the Humboldt coast (Reading Rock south to Cape Mendocino, including Trinidad and Eureka) and from Cape Mendocino to Ten Mile north of Fort Bragg (including Shelter Cove). Bodega Bay, Lawson's and everything south of Ten Mile are open, as is Crescent City."],
+  ["Limit","10 Dungeness per person per day."],
+  ["Size","5¾ inches minimum, measured straight across the shell just in front of the points (the points don't count). Measure before it goes in the bucket."],
+  ["Season","First Saturday of November through June 30 from Sonoma County south. Through July 30 in Mendocino, Humboldt and Del Norte."],
+  ["Hoop nets","Must be raised and checked at least every 2 hours. From shore or a pier they don't need a buoy."],
+  ["Crab snares","Up to six loops on a snare."],
+  ["Public piers","No fishing license needed, but only two rods or nets per person (two hoop nets, two rods, or one of each). Size and bag limits still apply."],
+  ["Beaches and jetties","A California fishing license is required for anyone 16 or older."],
+  ["San Francisco Bay","No Dungeness may be kept from San Francisco or San Pablo Bay, meaning anywhere east of the Golden Gate Bridge. Rock crab only there."],
+  ["Rock crab","Red, yellow and brown rock crab: 35 per day, 4 inch minimum, open all year. A nice bonus from the jetties."],
+  ["Eating","State health officials advise against eating the guts (crab butter). Clean crabs before cooking, or discard the cooking water."]],
+ links:[["CDFW in-season closures","https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason"],["CDFW crab rules","https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs/Crab"],["Whale-safe gear status","https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries"],["Domoic acid advisories","https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram/DomoicAcid.aspx"],["Lawson's Landing report","https://fishlawsons.blogspot.com/"],["Shore snare reports","https://www.fishsniffer.com/durasnare"],["NorCal Fish Reports","https://www.norcalfishreports.com"],["Pier Fishing in California","https://www.pierfishing.com"]]};
+//SITES-END
+
+const STATIONS=[
+ {id:"9414131",n:"Pillar Point Harbor",lat:37.5025,lon:-122.4822},{id:"9414275",n:"Ocean Beach",lat:37.775,lon:-122.513},
+ {id:"9414290",n:"San Francisco",lat:37.8063,lon:-122.4659},{id:"9415020",n:"Point Reyes",lat:37.9942,lon:-122.9736},
+ {id:"9415469",n:"Tomales Bay entrance",lat:38.2283,lon:-122.977},{id:"9415396",n:"Blake's Landing, Tomales Bay",lat:38.19,lon:-122.917},
+ {id:"9415625",n:"Bodega Harbor entrance",lat:38.3083,lon:-123.055},{id:"9416409",n:"Green Cove",lat:38.7043,lon:-123.4494},
+ {id:"9416841",n:"Arena Cove",lat:38.9146,lon:-123.7111},{id:"9417426",n:"Noyo Harbor",lat:39.4258,lon:-123.8051},
+ {id:"9418024",n:"Shelter Cove",lat:40.025,lon:-124.058},{id:"9418767",n:"Humboldt Bay North Spit",lat:40.7669,lon:-124.2174},
+ {id:"9419750",n:"Crescent City",lat:41.7456,lon:-124.1844}];
+const FALLBACK_STATION="9415020";
+
+/* ============================== STORAGE ============================== */
+const store={get(k,d){try{const v=localStorage.getItem("crab."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+             set(k,v){try{localStorage.setItem("crab."+k,JSON.stringify(v))}catch(e){}}};
+let favs=new Set(store.get("favs",null)||SITES.filter(s=>s.fav).map(s=>s.id));
+let custom=store.get("custom",[]);
+let log=store.get("log",[]);
+let current=store.get("current",null);
+const allSites=()=>SITES.concat(custom);
+const siteById=id=>allSites().find(s=>s.id===id);
+if(!siteById(current))current=[...favs][0]||SITES[0].id;
+
+/* ============================== TIME (Pacific wall clock) ============================== */
+/* Every feed is asked for Pacific time. Times are held as "wall ms": Date.UTC() of the Pacific clock reading. */
+const H=3600e3;
+function pacNow(){const p={};new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",hourCycle:"h23",year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric"}).formatToParts(new Date()).forEach(x=>p[x.type]=+x.value);return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute)}
+function parseT(s){const m=/^(\d+)-(\d+)-(\d+)[T ](\d+):(\d+)/.exec(s);return m?Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5]):Date.UTC(+s.slice(0,4),s.slice(5,7)-1,+s.slice(8,10))}
+const p2=n=>String(n).padStart(2,"0");
+const hourKey=ms=>{const d=new Date(ms);return d.getUTCFullYear()+"-"+p2(d.getUTCMonth()+1)+"-"+p2(d.getUTCDate())+"T"+p2(d.getUTCHours())+":00"};
+const ymd=ms=>{const d=new Date(ms);return d.getUTCFullYear()+p2(d.getUTCMonth()+1)+p2(d.getUTCDate())};
+const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtTime(ms){const d=new Date(ms);let h=d.getUTCHours(),m=d.getUTCMinutes();const ap=h<12?"am":"pm";h=h%12||12;return h+(m?":"+p2(m):"")+" "+ap}
+function fmtDay(ms,now){const a=Math.floor(ms/864e5),b=Math.floor((now??pacNow())/864e5);if(a===b)return"Today";if(a===b+1)return"Tomorrow";return DOW[new Date(ms).getUTCDay()]}
+const fmtDate=ms=>{const d=new Date(ms);return DOW[d.getUTCDay()]+" "+MON[d.getUTCMonth()]+" "+d.getUTCDate()};
+
+/* ============================== SEASON ============================== */
+function seasonInfo(site,ms){
+  const d=new Date(ms),y=d.getUTCFullYear();
+  const opener=yr=>{const f=new Date(Date.UTC(yr,10,1));return Date.UTC(yr,10,1+((6-f.getUTCDay()+7)%7))};
+  const north=site.lat>=RULES.lineLat;
+  const close=yr=>north?Date.UTC(yr,6,31):Date.UTC(yr,6,1); // first closed day
+  const open=ms>=opener(y)||ms<close(y);
+  return{open,north,closes:north?"July 30":"June 30",nextOpen:opener(ms<opener(y)?y:y+1)};
+}
+
+/* ============================== DATA LOADING ============================== */
+const DATA={tide:{},wx:{},sea:{},alerts:{},loadedAt:0,stale:false};
+async function getJSON(url,key,maxAgeMin){
+  const c=store.get("c."+key,null);
+  if(c&&Date.now()-c.at<maxAgeMin*6e4)return c.d;
+  try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);const d=await r.json();store.set("c."+key,{at:Date.now(),d});return d}
+  catch(e){if(c){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);return c.d}throw e}
+}
+function nearestStation(lat,lon){let b=STATIONS[0],bd=1e9;for(const s of STATIONS){const d=Math.hypot(s.lat-lat,(s.lon-lon)*.78);if(d<bd){bd=d;b=s}}return b.id}
+async function loadTide(st,now){
+  if(DATA.tide[st])return;
+  const u="https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=robs_crab_report&begin_date="+ymd(now-24*H)+"&range=192&datum=MLLW&station="+st+"&time_zone=lst_ldt&units=english&interval=hilo&format=json";
+  const j=await getJSON(u,"tide."+st+"."+ymd(now),360);
+  if(!j.predictions)throw new Error("no tide");
+  DATA.tide[st]=j.predictions.map(p=>({t:parseT(p.t),v:+p.v,hi:p.type==="H"}));
+}
+async function loadAll(force){
+  const now=pacNow(),sites=allSites();
+  if(force){try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.")).forEach(k=>localStorage.removeItem(k))}catch(e){}DATA.tide={};DATA.alerts={}}
+  DATA.stale=false;
+  sites.forEach(s=>{s.station=s.station||nearestStation(s.lat,s.lon)});
+  const sig=sites.map(s=>s.id).join(",").length+"."+sites.length;
+  const lat=sites.map(s=>s.lat).join(","),lon=sites.map(s=>s.lon).join(",");
+  const slat=sites.map(s=>(s.sea||s).lat??s.lat).join(","),slon=sites.map(s=>(s.sea||s).lon??s.lon).join(",");
+  const tz="&timezone=America%2FLos_Angeles";
+  const wxU="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+"&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,precipitation_probability,weather_code,cloud_cover&daily=sunrise,sunset&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch&forecast_days=6&past_days=3"+tz;
+  const seaU="https://marine-api.open-meteo.com/v1/marine?latitude="+slat+"&longitude="+slon+"&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,sea_surface_temperature&length_unit=imperial&forecast_days=6&past_days=1"+tz;
+  const stations=[...new Set(sites.map(s=>s.station).concat(FALLBACK_STATION))];
+  const [wx,sea]=await Promise.all([
+    getJSON(wxU,"wx."+sig,45),getJSON(seaU,"sea."+sig,45),
+    ...stations.map(st=>loadTide(st,now).catch(()=>null))]);
+  if(!DATA.tide[FALLBACK_STATION]&&!Object.keys(DATA.tide).length)throw new Error("tides unavailable");
+  const arr=x=>Array.isArray(x)?x:[x];
+  arr(wx).forEach((w,i)=>{const s=sites[i];if(!s||!w.hourly)return;const m=new Map(),h=w.hourly;
+    h.time.forEach((t,k)=>m.set(t,{temp:h.temperature_2m[k],wind:h.wind_speed_10m[k],gust:h.wind_gusts_10m[k],wdir:h.wind_direction_10m[k],rain:h.precipitation[k]||0,pop:h.precipitation_probability[k],code:h.weather_code[k],cloud:h.cloud_cover[k]}));
+    DATA.wx[s.id]={h:m,sun:w.daily.time.map((d,k)=>({day:parseT(d),rise:parseT(w.daily.sunrise[k]),set:parseT(w.daily.sunset[k])}))}});
+  arr(sea).forEach((w,i)=>{const s=sites[i];if(!s||!w.hourly)return;const m=new Map(),h=w.hourly,c=(w.hourly_units||{}).sea_surface_temperature!=="°F";
+    h.time.forEach((t,k)=>m.set(t,{wave:h.wave_height[k],per:h.wave_period[k],dir:h.wave_direction[k],swell:h.swell_wave_height[k],sper:h.swell_wave_period[k],sst:h.sea_surface_temperature[k]==null?null:(c?h.sea_surface_temperature[k]*9/5+32:h.sea_surface_temperature[k])}));
+    DATA.sea[s.id]=m});
+  DATA.loadedAt=now;
+}
+async function loadAlerts(site){
+  if(DATA.alerts[site.id])return DATA.alerts[site.id];
+  try{const j=await getJSON("https://api.weather.gov/alerts/active?point="+site.lat.toFixed(3)+","+site.lon.toFixed(3),"al."+site.id,20);
+    DATA.alerts[site.id]=(j.features||[]).map(f=>f.properties).filter(p=>/surf|beach|wind|gale|craft|storm|tsunami|flood|rip|sneaker|sea|marine|fog/i.test(p.event))}
+  catch(e){DATA.alerts[site.id]=[]}
+  return DATA.alerts[site.id];
+}
+
+/* ============================== TIDE MATH ============================== */
+function tideAt(site,t){
+  const e=DATA.tide[site.station]||DATA.tide[FALLBACK_STATION];if(!e)return null;
+  let i=-1;for(let k=0;k<e.length-1;k++)if(e[k].t<=t&&t<e[k+1].t){i=k;break}
+  if(i<0)return null;
+  const a=e[i],b=e[i+1],ph=(t-a.t)/(b.t-a.t),dur=(b.t-a.t)/H;
+  const h=a.v+(b.v-a.v)*(1-Math.cos(Math.PI*ph))/2;
+  const rate=(b.v-a.v)*Math.PI/2*Math.sin(Math.PI*ph)/dur; // ft per hour, + = rising
+  const near=ph<.5?a:b,toSlack=Math.abs(t-near.t)/H;
+  let stage;
+  if(toSlack<=.75)stage=near.hi?"High slack":"Low slack";
+  else stage=(ph<.34?"Early ":ph>.66?"Late ":"Mid ")+(b.v>a.v?"incoming":"outgoing");
+  return{h,rate,rising:b.v>a.v,prev:a,next:b,near,toSlack,stage,range:Math.abs(b.v-a.v)};
+}
+
+/* ============================== SCORING ============================== */
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const COMPASS=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compass=d=>d==null?"":COMPASS[Math.round(d/22.5)%16];
+function sunFor(site,t){const s=(DATA.wx[site.id]||{}).sun||[];const day=Math.floor(t/864e5)*864e5;return s.find(x=>x.day===day)||s[s.length-1]||{rise:day+7*H,set:day+17*H}}
+function dayness(site,t){const s=sunFor(site,t),r=s.rise+(t-s.day>=0?0:0);const tw=.75*H;return clamp(Math.min((t-(s.rise-tw))/tw,((s.set+tw)-t)/tw))}
+function rain72(site,t){const m=(DATA.wx[site.id]||{}).h;if(!m)return 0;let sum=0;for(let k=0;k<72;k++){const x=m.get(hourKey(t-k*H));if(x)sum+=x.rain}return sum}
+function cond(site,t){
+  const k=hourKey(t),w=((DATA.wx[site.id]||{}).h||new Map()).get(k)||{},s=(DATA.sea[site.id]||new Map()).get(k)||{},td=tideAt(site,t);
+  const season=seasonInfo(site,t),day=dayness(site,t);
+  const wave=s.wave??null,eff=wave==null?null:wave*site.exposure*(1+.6*clamp((wave-8)/12));
+  const windEff=w.wind==null?null:.6*w.wind+.4*(w.gust??w.wind);
+  const r72=rain72(site,t);
+  // parts, each 0..1
+  let pT=.5,pS=.6,pW=.7,pL=.6+.4*(1-day);
+  if(td){pT=1-clamp(Math.abs(td.rate)*(site.current||1)/1.5);
+    if(td.near.hi&&td.toSlack<=1.5)pT+=.12; if(td.rising&&(td.next.t-t)<=2*H)pT+=.1; else if(!td.rising&&td.toSlack>1.5)pT-=.05;
+    if(td.h<1)pT-=.15; pT=clamp(pT)}
+  if(eff!=null)pS=1-clamp((eff-2.5)/6.5);
+  if(windEff!=null)pW=1-clamp((windEff-6)/22);
+  let score=100*(.42*pT+.28*pS+.20*pW+.10*pL);
+  const runoff=clamp((r72-.5)/2.5)*(site.fresh||0);
+  score-=runoff*30;
+  if((w.rain||0)>.08)score-=5;
+  const flags=[];
+  if(eff!=null&&eff>=8){score=Math.min(score,18);flags.push("surf")}
+  else if(eff!=null&&eff>=6){score=Math.min(score,38)}
+  if(wave!=null&&wave>=12&&site.exposure>=.3&&!flags.includes("surf"))flags.push("bigsea");
+  if(wave!=null&&wave>=6&&(s.per||0)>=14&&site.exposure>=.4)flags.push("sneaker");
+  if(windEff!=null&&windEff>=30){score=Math.min(score,22);flags.push("wind")}
+  if(site.dayOnly&&day<.5){flags.push("closed-hours")}
+  if(!season.open){score=0;flags.push("season")}
+  score=Math.round(clamp(score,0,100));
+  return{t,score,tide:td,w,s,wave,eff,windEff,r72,runoff,day,season,flags,parts:{pT,pS,pW,pL}};
+}
+function grade(sc){return sc>=80?{w:"Prime",c:"good",n:"Drop everything and go"}:sc>=65?{w:"Good",c:"good",n:"Worth the drive"}:sc>=45?{w:"Fair",c:"fair",n:"Fishable, pick your hours"}:sc>=25?{w:"Poor",c:"bad",n:"Slim pickings"}:{w:"Stay ashore",c:"bad",n:"Not today"}}
+const part3=p=>p>=.7?"good":p>=.4?"fair":"bad";
+function hoursAhead(site,from,n){const out=[],t0=Math.floor(from/H)*H;for(let k=0;k<n;k++)out.push(cond(site,t0+k*H));return out}
+function bestWindows(site,now,hours,max){
+  const hs=hoursAhead(site,now,hours).filter(c=>c.tide&&c.t>=now-H&&!(site.dayOnly&&c.day<.5));
+  const civil=c=>{const h=new Date(c.t).getUTCHours();return h>=5&&h<=21};
+  const picked=[];
+  hs.filter(civil).sort((a,b)=>b.score-a.score).forEach(c=>{if(picked.length<max&&c.score>=40&&picked.every(p=>Math.abs(p.t-c.t)>=5*H))picked.push(c)});
+  return picked.sort((a,b)=>a.t-b.t).map(c=>{
+    // widen to neighbouring hours that stay within 8 points of the peak
+    let a=c.t,b=c.t+H;const at=t=>hs.find(x=>x.t===t);
+    while(at(a-H)&&at(a-H).score>=c.score-8&&c.t-a<2*H)a-=H;
+    while(at(b)&&at(b).score>=c.score-8&&b-c.t<3*H)b+=H;
+    return{...c,from:Math.max(a,now-(now%H?0:0)),to:b}});
+}
+function whyText(c,site){
+  if(!c.season.open)return"Dungeness season is closed here. It reopens "+fmtDate(c.season.nextOpen)+".";
+  const bits=[];
+  if(c.flags.includes("surf"))return"Surf is running about "+c.eff.toFixed(0)+" ft at the water's edge. Too rough to fish safely or keep gear on the bottom.";
+  if(c.flags.includes("wind"))return"Wind is howling, gusting near "+Math.round(c.w.gust||c.w.wind)+" mph. Casting and tending gear will be miserable.";
+  if(c.tide){const r=Math.abs(c.tide.rate)*(site.current||1);
+    bits.push(c.tide.toSlack<=.75?c.tide.stage+" now, so gear stays put and crabs are walking":r>1?"the tide is running hard, so gear will roll until "+(c.tide.next.hi?"high":"low")+" slack at "+fmtTime(c.tide.next.t):r>.55?"moderate current, easing toward "+(c.tide.next.hi?"high":"low")+" slack at "+fmtTime(c.tide.next.t):"gentle tide movement")}
+  if(c.eff!=null)bits.push(c.eff<2.5?"calm water":c.eff<4.5?"some swell":"heavy swell");
+  if(c.windEff!=null)bits.push(c.windEff<8?"light wind":c.windEff<16?"a steady breeze":"strong wind");
+  if(c.runoff>.25)bits.push("recent rain is pushing fresh water out of the bay");
+  let s=bits.join(", ");s=s.charAt(0).toUpperCase()+s.slice(1)+".";
+  if(c.flags.includes("closed-hours"))s+=" Note this spot is day-use only.";
+  return s;
+}
+
+/* ============================== RENDER: TODAY ============================== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+let viewOffset=0, sceneState=null;
+function mapLinks(s,small){const q=s.lat+","+s.lon,c=small?"btn small":"btn";
+  return'<a class="'+c+'" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q+'">Google Maps</a><a class="'+c+'" target="_blank" rel="noopener" href="https://maps.apple.com/?daddr='+q+"&q="+encodeURIComponent(s.name)+'">Apple Maps</a>'}
+function renderPicker(){
+  const sites=allSites(),favList=sites.filter(s=>favs.has(s.id));
+  const list=favList.slice();const cur=siteById(current);if(cur&&!favs.has(cur.id))list.push(cur);
+  $("picker").innerHTML=list.map(s=>'<button class="chip" type="button" data-id="'+s.id+'" aria-pressed="'+(s.id===current)+'">'+(favs.has(s.id)?'<span class="st">★</span>':"")+esc(s.short||s.name)+"</button>").join("")+'<button class="chip more" type="button" data-id="">More spots…</button>';
+}
+$("picker").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(!b.dataset.id){showTab("spots");return}selectSite(b.dataset.id)});
+function selectSite(id){current=id;store.set("current",id);viewOffset=0;$("scrub").value=0;renderPicker();showTab("today");renderToday()}
+function gaugeSVG(sc,g){
+  const a=Math.PI*(1-sc/100),cx=100,cy=100,r=80,nx=cx+Math.cos(a)*66,ny=cy-Math.sin(a)*66;
+  const arc=(f,t,col)=>{const A=Math.PI*(1-f/100),B=Math.PI*(1-t/100);return'<path d="M'+(cx+Math.cos(A)*r)+" "+(cy-Math.sin(A)*r)+" A"+r+" "+r+" 0 0 1 "+(cx+Math.cos(B)*r)+" "+(cy-Math.sin(B)*r)+'" fill="none" stroke="var(--'+col+')" stroke-width="14"/>'};
+  return arc(0,44,"bad")+arc(46,64,"fair")+arc(66,100,"good")+'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="var(--ink)" stroke-width="5" stroke-linecap="round"/><circle cx="'+cx+'" cy="'+cy+'" r="8" fill="var(--ink)"/><text x="'+cx+'" y="126" text-anchor="middle" font-size="26" font-weight="700">'+sc+'<tspan font-size="13" font-weight="600"> / 100</tspan></text>';
+}
+function renderToday(){
+  const site=siteById(current);if(!site||!DATA.loadedAt)return;
+  const now=pacNow(),t=viewOffset?Math.floor(now/H)*H+viewOffset*H:now,c=cond(site,t),g=grade(c.score);
+  $("status").hidden=true;$("today").hidden=false;
+  $("sceneWhere").textContent=site.name;
+  $("sceneWhen").textContent=viewOffset?fmtDay(t,now)+" "+fmtTime(t):"Now · "+fmtTime(now);
+  $("scrubLbl").textContent=viewOffset?"+"+viewOffset+" hr":"Now";
+  $("gauge").innerHTML=gaugeSVG(c.score,g);$("gauge").setAttribute("aria-label","Crabbing score "+c.score+" out of 100");
+  $("vLbl").textContent=(viewOffset?fmtDay(t,now)+" "+fmtTime(t):"Right now")+" · "+(site.short||site.name);
+  $("vWord").textContent=g.w;$("vWord").className="word t-"+g.c;$("vWhy").textContent=whyText(c,site);
+  sceneState={site,c};
+  // instruments
+  const td=c.tide,I=[];
+  if(td)I.push([part3(c.parts.pT),"Tide",td.h.toFixed(1)+"<small> ft "+(td.toSlack<=.5?"·":td.rising?"↑":"↓")+"</small>",td.stage+". "+(td.next.hi?"High":"Low")+" "+td.next.v.toFixed(1)+" ft at "+fmtTime(td.next.t)]);
+  if(td){const r=Math.abs(td.rate)*(site.current||1);I.push([part3(c.parts.pT),"Current",r<.35?"Slack":r<.8?"Easy":r<1.2?"Running":"Ripping",td.range.toFixed(1)+" ft swing this tide"+(td.range<2.5?" (gentle)":td.range>5?" (big)":"")])}
+  if(c.wave!=null)I.push([part3(c.parts.pS),"Swell",c.wave.toFixed(1)+"<small> ft @ "+Math.round(c.s.per||0)+" s</small>","From "+compass(c.s.dir)+". About "+c.eff.toFixed(1)+" ft where you fish"]);
+  if(c.w.wind!=null)I.push([part3(c.parts.pW),"Wind",Math.round(c.w.wind)+"<small> mph "+compass(c.w.wdir)+"</small>","Gusts "+Math.round(c.w.gust||c.w.wind)+" mph · "+Math.round(c.w.wind*.869)+" kt"]);
+  if(c.w.temp!=null)I.push([(c.w.rain||0)>.05?"fair":"","Weather",Math.round(c.w.temp)+"<small>°F</small>",wmo(c.w.code)+(c.w.pop!=null?" · "+c.w.pop+"% rain":"")]);
+  if(c.s.sst!=null)I.push(["","Water temp",Math.round(c.s.sst)+"<small>°F</small>","Sea surface offshore"]);
+  I.push([c.runoff>.25?"bad":c.r72>.5?"fair":"good","Rain, last 3 days",c.r72.toFixed(1)+"<small> in</small>",site.fresh?(c.runoff>.25?"Runoff is freshening the bay; crabs move out":"Little runoff effect"):"Open coast; runoff matters little"]);
+  const sun=sunFor(site,t),mp=moon(t);
+  I.push(["","Daylight",fmtTime(sun.rise).replace(" ","")+"<small> – "+fmtTime(sun.set).replace(" ","")+"</small>",site.dayOnly?"Day-use spot: fish within these hours":"Dusk and after dark are prime"]);
+  I.push(["","Moon",mp.name,Math.round(mp.illum*100)+"% lit · "+(mp.spring?"spring tides (big swings)":"neap tides (gentle swings)")]);
+  $("inst").innerHTML=I.map(x=>'<div class="inst '+x[0]+'"><div class="lbl">'+x[1]+'</div><div class="v">'+x[2]+'</div><div class="d">'+esc(x[3])+"</div></div>").join("");
+  renderAlerts(site,c);renderWindows(site,now);renderChart(site,now,t);renderGear(site,c);renderSpotCard(site);
+}
+function wmo(c){if(c==null)return"";if(c===0)return"Clear";if(c<=2)return"Partly cloudy";if(c===3)return"Overcast";if(c<=48)return"Fog";if(c<=57)return"Drizzle";if(c<=67)return"Rain";if(c<=77)return"Snow";if(c<=82)return"Showers";return"Thunderstorms"}
+function moon(t){const syn=29.530588853,ref=Date.UTC(2000,0,6,10,14);const age=(((t-ref)/864e5)%syn+syn)%syn,f=age/syn;
+  const names=["New moon","Waxing crescent","First quarter","Waxing gibbous","Full moon","Waning gibbous","Last quarter","Waning crescent"];
+  const d=Math.min(f%.5,.5-f%.5)*syn; // days from new/full
+  return{f,illum:(1-Math.cos(2*Math.PI*f))/2,name:names[Math.round(f*8)%8],spring:d<3.7}}
+function renderAlerts(site,c){
+  const out=[];
+  if(!c.season.open)out.push(["bad","Season closed","Recreational Dungeness season reopens "+fmtDate(c.season.nextOpen)+". Rock crab is open all year."]);
+  if(c.flags.includes("surf"))out.push(["bad","Dangerous surf","Stay off jetties and wet sand. Never turn your back on the ocean."]);
+  if(c.flags.includes("bigsea"))out.push(["bad","Big seas outside",Math.round(c.wave)+" ft swell on the open coast. Stay off jetty rocks and well back from the water's edge."]);
+  if(c.flags.includes("sneaker"))out.push(["bad","Sneaker wave risk","Long-period swell ("+Math.round(c.s.per)+" s). Waves can surge far up the beach without warning."]);
+  if(c.flags.includes("closed-hours")&&c.season.open)out.push(["fair","After hours","This spot is day-use only. Check gate hours before you drive."]);
+  if(site.advisory)out.push(["bad","Health closure",esc(site.advisory)+' <a target="_blank" rel="noopener" href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason">CDFW in-season page</a>']);
+  $("alerts").innerHTML=out.map(a=>'<div class="alert '+a[0]+'"><div><b>'+esc(a[1])+".</b> <span>"+a[2]+"</span></div></div>").join("")+'<div id="nws"></div>';
+  loadAlerts(site).then(al=>{if(site.id!==current||!$("nws"))return;
+    $("nws").innerHTML=al.map(p=>'<div class="alert '+(/Severe|Extreme/.test(p.severity)||/warning/i.test(p.event)?"bad":"fair")+'" style="margin-top:8px"><div><b>'+esc(p.event)+".</b> <span>"+esc(p.headline||"")+" (National Weather Service)</span></div></div>").join("")});
+}
+function renderWindows(site,now){
+  const ws=bestWindows(site,now,72,4);
+  $("windows").innerHTML=ws.length?ws.map(w=>{const g=grade(w.score),td=w.tide;
+    return'<div class="win"><div class="sc b-'+g.c+'">'+w.score+'</div><div><div class="t">'+fmtDay(w.from,now)+" "+fmtTime(w.from)+" – "+fmtTime(w.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" ("+td.near.v.toFixed(1)+" ft) · swell "+(w.wave==null?"–":w.wave.toFixed(0)+" ft")+" · wind "+(w.w.wind==null?"–":Math.round(w.w.wind)+" mph")+"</div></div></div>"}).join("")
+    :'<p class="empty">'+(seasonInfo(site,now).open?"No decent windows in the next three days. Check the other spots or wait for the swell and wind to lie down.":"Season is closed.")+"</p>";
+  const days=[];const d0=Math.floor(now/864e5)*864e5;
+  for(let d=0;d<5;d++){const hs=hoursAhead(site,d0+d*864e5,24).filter(c=>c.tide&&c.t>=now-H&&!(site.dayOnly&&c.day<.5));if(!hs.length)continue;const hh=hs.filter(c=>{const h=new Date(c.t).getUTCHours();return h>=5&&h<=21});if(!hh.length)continue;const b=hh.reduce((a,c)=>c.score>a.score?c:a);days.push(b)}
+  $("days").innerHTML=days.map(b=>{const g=grade(b.score);return'<div class="day"><div class="lbl">'+fmtDay(b.t,now)+'</div><div class="bar"><i style="height:'+Math.max(6,b.score)+"%;background:var(--"+g.c+')"></i></div><div class="s t-'+g.c+'">'+b.score+'</div><div class="n">'+fmtTime(b.t)+"</div></div>"}).join("");
+}
+function renderChart(site,now,sel){
+  const W=720,Hh=250,L=38,R=12,T=22,B=30,t0=Math.floor(now/H)*H-3*H,t1=t0+51*H;
+  const e=(DATA.tide[site.station]||DATA.tide[FALLBACK_STATION]||[]).filter(p=>p.t>=t0-8*H&&p.t<=t1+8*H);
+  if(!e.length){$("tideChart").innerHTML="";return}
+  const lo=Math.floor(Math.min(...e.map(p=>p.v),0)),hi=Math.ceil(Math.max(...e.map(p=>p.v))+.4);
+  const X=t=>L+(t-t0)/(t1-t0)*(W-L-R),Y=v=>T+(hi-v)/(hi-lo)*(Hh-T-B);
+  let s="";
+  // night bands
+  for(let d=Math.floor(t0/864e5)*864e5-864e5;d<t1;d+=864e5){const a=sunFor(site,d),b=sunFor(site,d+864e5);const n0=Math.max(a.set,t0),n1=Math.min(b.rise,t1);if(n1>n0)s+='<rect x="'+X(n0)+'" y="'+T+'" width="'+(X(n1)-X(n0))+'" height="'+(Hh-T-B)+'" fill="var(--line)" opacity=".45"/>'}
+  // good windows
+  const hs=hoursAhead(site,t0,51);
+  hs.forEach(c=>{if(c.score>=65&&c.t>=now-H&&!(site.dayOnly&&c.day<.5))s+='<rect x="'+X(c.t)+'" y="'+T+'" width="'+(X(c.t+H)-X(c.t)+.5)+'" height="'+(Hh-T-B)+'" fill="var(--good)" opacity=".22"/>'});
+  for(let v=lo;v<=hi;v++)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="'+(v===0?1.5:.6)+'"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+v+"</text>";
+  for(let t=Math.ceil(t0/(6*H))*6*H;t<=t1;t+=6*H){const hr=new Date(t).getUTCHours();s+='<text x="'+X(t)+'" y="'+(Hh-10)+'" text-anchor="middle"'+(hr===0?' font-weight="700"':"")+">"+(hr===0?DOW[new Date(t).getUTCDay()]:fmtTime(t).replace(" ",""))+"</text>"+(hr===0?'<line x1="'+X(t)+'" x2="'+X(t)+'" y1="'+T+'" y2="'+(Hh-B)+'" stroke="var(--ink2)" stroke-width=".8" stroke-dasharray="3 3"/>':"")}
+  let d="";for(let t=t0;t<=t1;t+=H/4){const td=tideAt(site,t);if(td)d+=(d?"L":"M")+X(t).toFixed(1)+" "+Y(td.h).toFixed(1)}
+  s+='<path d="'+d+"L"+X(t1)+" "+Y(lo)+"L"+X(t0)+" "+Y(lo)+'Z" fill="var(--ink)" opacity=".1"/><path d="'+d+'" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>';
+  e.filter(p=>p.t>t0+H&&p.t<t1-H).forEach(p=>{s+='<circle cx="'+X(p.t)+'" cy="'+Y(p.v)+'" r="3.5" fill="var(--card)" stroke="var(--ink)" stroke-width="2"/><text x="'+X(p.t)+'" y="'+(Y(p.v)+(p.hi?-9:17))+'" text-anchor="middle" style="fill:var(--ink);font-weight:600">'+p.v.toFixed(1)+" · "+fmtTime(p.t).replace(" ","")+"</text>"});
+  const td=tideAt(site,sel);
+  if(td)s+='<line x1="'+X(sel)+'" x2="'+X(sel)+'" y1="'+(T-6)+'" y2="'+(Hh-B)+'" stroke="var(--magenta)" stroke-width="2"/><circle cx="'+X(sel)+'" cy="'+Y(td.h)+'" r="5.5" fill="var(--magenta)" stroke="var(--card)" stroke-width="2"/><text x="'+Math.min(W-R-20,Math.max(L+20,X(sel)))+'" y="12" text-anchor="middle" style="fill:var(--magenta);font-weight:700">'+(sel===now?"NOW":fmtTime(sel).toUpperCase())+"</text>";
+  $("tideChart").innerHTML=s;
+}
+function renderGear(site,c){
+  const r=c.tide?Math.abs(c.tide.rate)*(site.current||1):0,eff=c.eff||0;
+  const snare=[],hoop=[];let sOk="good",hOk="good";
+  if(!site.gear.includes("snare")){sOk="bad";snare.push("Not a casting spot. Leave the rod home.")}
+  else{
+    if(eff>=6){sOk="bad";snare.push("Surf is too heavy for a snare to sit still.")}
+    else if(eff>=3.5||r>1){sOk="fair";snare.push("Go heavy: 6 to 8 oz of weight so the snare holds bottom.")}
+    else snare.push("Easy conditions. 4 to 5 oz will hold.");
+    snare.push(r<.5?"Slack water: let it soak 10 to 15 minutes between checks.":"Cast up-current and let it settle; check every 8 to 10 minutes.");
+    snare.push("Reel steady and never give slack once the loops tighten.");
+  }
+  if(!site.gear.includes("hoop")){hOk="bad";hoop.push("No good drop here for hoop nets. This is a casting spot.")}
+  else{
+    if(r>1.1){hOk="fair";hoop.push("Current will drag and flatten nets. Hold them until about an hour before slack"+(c.tide?" ("+fmtTime(c.tide.next.t)+")":"")+".")}
+    else hoop.push("Current is manageable. Nets should sit flat.");
+    if(eff>=5){hOk="fair";hoop.push("Surge will bounce the nets. Fish the sheltered side.")}
+    hoop.push("Pull every 15 to 20 minutes, straight up and fast. By law, hoop nets must be raised at least every 2 hours.");
+  }
+  const bait="Bait: "+RULES.bait;
+  $("gear").innerHTML=[["Rod &amp; crab snare",sOk,snare],["Hoop nets",hOk,hoop]].map(x=>'<div><h3>'+x[0]+' <span class="pill b-'+x[1]+'">'+(x[1]==="good"?"Good pick":x[1]==="fair"?"Workable":"Skip")+'</span></h3><ul class="tips">'+x[2].map(t=>"<li>"+t+"</li>").join("")+"</ul></div>").join("")+'<div><h3>Don\'t forget</h3><ul class="tips"><li>'+bait+"</li><li>Crab gauge. Keepers are "+RULES.size+" across the shell.</li><li>Fishing license (not needed on a public pier), bucket, gloves, headlamp.</li></ul></div>";
+}
+function renderSpotCard(site){
+  $("spotCard").innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h2>'+esc(site.name)+'</h2><div class="lbl">'+esc(site.kind||"")+(site.region?" · "+esc(site.region):"")+"</div></div>"+starBtn(site)+"</div>"+
+    (site.blurb?'<p style="margin-top:8px">'+esc(site.blurb)+"</p>":"")+(site.tips&&site.tips.length?'<ul class="tips">'+site.tips.map(t=>"<li>"+esc(t)+"</li>").join("")+"</ul>":"")+
+    (site.access?'<p class="fine" style="margin-top:8px">'+esc(site.access)+"</p>":"")+(site.buzz?'<p class="fine" style="margin-top:6px">'+esc(site.buzz)+"</p>":"")+
+    '<div class="btns" style="margin-top:12px"><button class="btn primary" type="button" data-log="'+site.id+'">Log a catch here</button>'+mapLinks(site)+(site.link?'<a class="btn" target="_blank" rel="noopener" href="'+site.link[1]+'">'+esc(site.link[0])+"</a>":"")+"</div>";
+}
+const starBtn=s=>'<button class="star" type="button" data-star="'+s.id+'" aria-pressed="'+favs.has(s.id)+'" aria-label="'+(favs.has(s.id)?"Remove from":"Add to")+' favorites" title="Favorite">'+(favs.has(s.id)?"★":"☆")+"</button>";
+document.addEventListener("click",e=>{
+  const st=e.target.closest("[data-star]");if(st){const id=st.dataset.star;favs.has(id)?favs.delete(id):favs.add(id);store.set("favs",[...favs]);renderPicker();renderSpots();if(DATA.loadedAt)renderSpotCard(siteById(current));toast(favs.has(id)?"Added to favorites":"Removed from favorites");return}
+  const lg=e.target.closest("[data-log]");if(lg){showTab("log");$("lSpot").value=lg.dataset.log;$("lKeep").focus();return}
+  const go=e.target.closest("[data-go]");if(go){selectSite(go.dataset.go);window.scrollTo(0,0);return}
+  const rm=e.target.closest("[data-rmspot]");if(rm){custom=custom.filter(s=>s.id!==rm.dataset.rmspot);store.set("custom",custom);favs.delete(rm.dataset.rmspot);store.set("favs",[...favs]);if(current===rm.dataset.rmspot)current=SITES[0].id;renderPicker();renderSpots();fillSpotSelect();return}
+});
+$("scrub").addEventListener("input",e=>{viewOffset=+e.target.value;renderToday()});
+$("nowBtn").addEventListener("click",()=>{viewOffset=0;$("scrub").value=0;renderToday()});
+
+/* ============================== RENDER: SPOTS ============================== */
+function renderSpots(){
+  const el=$("tab-spots"),now=pacNow(),ready=!!DATA.loadedAt;
+  const rows=allSites().map(s=>{const c=ready?cond(s,now):null;const w=ready?bestWindows(s,now,36,1)[0]:null;return{s,c,w}});
+  rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||((b.w?b.w.score:b.c?b.c.score:0)-(a.w?a.w.score:a.c?a.c.score:0)));
+  const bet=ready?rows.filter(r=>!favs.has(r.s.id)&&r.w&&!r.s.custom&&!r.s.advisory).sort((a,b)=>b.w.score-a.w.score)[0]:null;
+  const favBest=ready?Math.max(0,...rows.filter(r=>favs.has(r.s.id)&&r.w).map(r=>r.w.score)):0;
+  let h="";
+  if(bet&&bet.w.score>=55)h+='<div class="bet"><div class="lbl" style="color:inherit">Somewhere new to try</div><h2>'+esc(bet.s.name)+"</h2><p>Scores "+bet.w.score+" "+fmtDay(bet.w.from,now).toLowerCase()+" around "+fmtTime(bet.w.t)+(bet.w.score>favBest+4?", better than your favorites ("+favBest+")":"")+". "+esc(bet.s.blurb||"")+'</p><button class="btn" type="button" data-go="'+bet.s.id+'">See the full report</button></div>';
+  h+=rows.map(({s,c,w})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
+    return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?"BEST 36H":"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'">'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
+      (w?'<p class="blurb"><b>'+fmtDay(w.from,now)+" "+fmtTime(w.from)+"–"+fmtTime(w.to)+"</b>"+(c?" · now "+c.score:"")+"</p>":"")+
+      (s.blurb?'<p class="blurb" style="margin-top:4px">'+esc(s.blurb)+"</p>":"")+
+      (s.buzz?'<p class="fine" style="margin-top:4px">'+esc(s.buzz)+"</p>":"")+(s.advisory?'<p class="fine t-bad" style="margin-top:4px;font-weight:600">'+esc(s.advisory)+"</p>":"")+
+      '<div class="btns">'+mapLinks(s,true)+(s.custom?'<button class="btn small" type="button" data-rmspot="'+s.id+'">Remove</button>':"")+"</div></div>"+starBtn(s)+"</div>"}).join("");
+  h+='<div class="card"><h2>Add your own spot</h2><form class="f" id="spotForm"><label><span class="lbl">Name</span><input id="sName" required placeholder="Secret jetty"></label><label><span class="lbl">Latitude</span><input id="sLat" required inputmode="decimal" placeholder="38.3050"></label><label><span class="lbl">Longitude</span><input id="sLon" required inputmode="decimal" placeholder="-123.0500"></label><label><span class="lbl">Kind of water</span><select id="sKind"><option value="0.3">Harbor, bay or pier</option><option value="0.6">Jetty or cove</option><option value="1">Open surf beach</option></select></label><div class="wide btns"><button class="btn" type="submit">Add spot</button><button class="btn" type="button" id="sHere">Use where I am now</button></div><p class="wide fine">Tip: in Google Maps, press and hold on the spot to see its latitude and longitude.</p></form></div>';
+  el.innerHTML=h;
+  $("spotForm").addEventListener("submit",e=>{e.preventDefault();const lat=parseFloat($("sLat").value),lon=parseFloat($("sLon").value);
+    if(!(lat>32&&lat<43&&lon<-116&&lon>-126)){toast("That doesn't look like the California coast. Check the numbers.");return}
+    const ex=+$("sKind").value,s={id:"c"+Date.now(),name:$("sName").value.trim(),short:$("sName").value.trim(),lat,lon,exposure:ex,fresh:ex<.5?.4:0,current:1,gear:ex===1?["snare"]:["snare","hoop"],kind:"Your spot",custom:true};
+    custom.push(s);store.set("custom",custom);favs.add(s.id);store.set("favs",[...favs]);fillSpotSelect();toast("Spot added. Loading its forecast…");boot(false).then(()=>selectSite(s.id))});
+  $("sHere").addEventListener("click",()=>{if(!navigator.geolocation){toast("Location isn't available on this device.");return}navigator.geolocation.getCurrentPosition(p=>{$("sLat").value=p.coords.latitude.toFixed(4);$("sLon").value=p.coords.longitude.toFixed(4)},()=>toast("Couldn't get your location. Type it in instead."))});
+}
+
+/* ============================== LOG ============================== */
+function fillSpotSelect(){const v=$("lSpot").value||current;$("lSpot").innerHTML=allSites().slice().sort((a,b)=>favs.has(b.id)-favs.has(a.id)).map(s=>'<option value="'+s.id+'">'+esc(s.name)+"</option>").join("")+'<option value="other">Somewhere else</option>';$("lSpot").value=v}
+function setWhenNow(){const n=pacNow(),d=new Date(n);$("lWhen").value=d.getUTCFullYear()+"-"+p2(d.getUTCMonth()+1)+"-"+p2(d.getUTCDate())+"T"+p2(d.getUTCHours())+":"+p2(d.getUTCMinutes())}
+$("logForm").addEventListener("submit",e=>{e.preventDefault();
+  const t=parseT($("lWhen").value),site=siteById($("lSpot").value);
+  const en={id:Date.now(),t,spot:$("lSpot").value,spotName:site?site.name:"Somewhere else",gear:$("lGear").value,keep:+$("lKeep").value||0,rel:+$("lRel").value||0,big:parseFloat($("lBig").value)||null,bait:$("lBait").value.trim(),hrs:parseFloat($("lHrs").value)||null,notes:$("lNotes").value.trim()};
+  if(site&&DATA.loadedAt){const c=cond(site,t);if(c.tide&&c.w.wind!=null)en.snap={score:c.score,stage:c.tide.stage,tide:+c.tide.h.toFixed(1),wave:c.wave==null?null:+c.wave.toFixed(1),wind:Math.round(c.w.wind),wdir:compass(c.w.wdir),sst:c.s.sst==null?null:Math.round(c.s.sst),moon:moon(t).name}}
+  log.unshift(en);log.sort((a,b)=>b.t-a.t);store.set("log",log);
+  ["lBig","lBait","lHrs","lNotes"].forEach(i=>$(i).value="");$("lKeep").value=0;$("lRel").value=0;setWhenNow();renderLog();toast(en.keep?"Logged. "+en.keep+" keeper"+(en.keep>1?"s":"")+", nice work.":"Logged. Skunked days count too.")});
+function renderLog(){
+  const trips=log.length,keep=log.reduce((a,e)=>a+e.keep,0),big=Math.max(0,...log.map(e=>e.big||0));
+  const by={};log.forEach(e=>{(by[e.spotName]=by[e.spotName]||{n:0,k:0});by[e.spotName].n++;by[e.spotName].k+=e.keep});
+  const bestSpot=Object.entries(by).sort((a,b)=>b[1].k/b[1].n-a[1].k/a[1].n)[0];
+  $("logStats").innerHTML=[["Trips",trips],["Keepers",keep],["Per trip",trips?(keep/trips).toFixed(1):"–"],["Biggest",big?big+'<small>"</small>':"–"]].map(x=>'<div class="inst"><div class="lbl">'+x[0]+'</div><div class="v">'+x[1]+"</div></div>").join("");
+  const pat=$("logPatterns");
+  if(trips>=3){const stage={};log.forEach(e=>{if(!e.snap)return;const k=e.snap.stage.replace(/^(Early|Mid|Late) /,"").replace(/^./,m=>m.toUpperCase());(stage[k]=stage[k]||{n:0,k:0});stage[k].n++;stage[k].k+=e.keep});
+    const tbl=(o,h)=>'<table class="t"><tr><th>'+h+"</th><th>Trips</th><th>Keepers</th><th>Per trip</th></tr>"+Object.entries(o).sort((a,b)=>b[1].k/b[1].n-a[1].k/a[1].n).map(([k,v])=>"<tr><td>"+esc(k)+"</td><td>"+v.n+"</td><td>"+v.k+"</td><td>"+(v.k/v.n).toFixed(1)+"</td></tr>").join("")+"</table>";
+    pat.hidden=false;pat.innerHTML="<h2>What's been working</h2>"+tbl(by,"Spot")+(Object.keys(stage).length?'<div style="height:14px"></div>'+tbl(stage,"Tide stage"):"")+(bestSpot?'<p class="fine" style="margin-top:8px">Best average so far: '+esc(bestSpot[0])+".</p>":"")}
+  else pat.hidden=true;
+  $("logList").innerHTML=log.length?log.map(e=>'<div class="entry"><div class="k">'+e.keep+"<small>KEEPERS</small></div><div><b>"+esc(e.spotName)+"</b> · "+fmtDate(e.t)+", "+new Date(e.t).getUTCFullYear()+" "+fmtTime(e.t)+'<div class="n">'+esc(e.gear)+(e.rel?" · "+e.rel+" thrown back":"")+(e.big?" · biggest "+e.big+'"':"")+(e.bait?" · "+esc(e.bait):"")+(e.hrs?" · "+e.hrs+" hr":"")+"</div>"+(e.snap?'<div class="n">Score '+e.snap.score+" · "+esc(e.snap.stage)+" ("+e.snap.tide+" ft)"+(e.snap.wave!=null?" · swell "+e.snap.wave+" ft":"")+" · wind "+e.snap.wdir+" "+e.snap.wind+" mph</div>":"")+(e.notes?"<div>"+esc(e.notes)+"</div>":"")+'</div><button class="del" type="button" data-del="'+e.id+'">Delete</button></div>').join(""):'<p class="empty">No trips logged yet. After the next outing, record what came up, even if it was nothing. A few entries in, this page starts showing which spots and tides work best.</p>';
+}
+let delArm=null;
+$("logList").addEventListener("click",e=>{const b=e.target.closest("[data-del]");if(!b)return;
+  if(delArm!==b.dataset.del){delArm=b.dataset.del;b.textContent="Tap again to delete";return}
+  log=log.filter(x=>String(x.id)!==delArm);delArm=null;store.set("log",log);renderLog()});
+function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+$("expCsv").addEventListener("click",()=>{const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  download("crab-log.csv",["Date,Time,Spot,Gear,Keepers,Thrown back,Biggest (in),Bait,Hours,Score,Tide stage,Tide (ft),Swell (ft),Wind (mph),Wind dir,Water (F),Moon,Notes"].concat(log.map(e=>{const s=e.snap||{},d=new Date(e.t);return[d.toISOString().slice(0,10),fmtTime(e.t),e.spotName,e.gear,e.keep,e.rel,e.big,e.bait,e.hrs,s.score,s.stage,s.tide,s.wave,s.wind,s.wdir,s.sst,s.moon,e.notes].map(q).join(",")})).join("\n"),"text/csv")});
+$("expJson").addEventListener("click",()=>download("crab-report-backup.json",JSON.stringify({log,favs:[...favs],custom}),"application/json"));
+$("impJson").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.log))throw 0;const ids=new Set(log.map(x=>x.id));j.log.forEach(x=>{if(!ids.has(x.id))log.push(x)});log.sort((a,b)=>b.t-a.t);store.set("log",log);
+  (j.custom||[]).forEach(c=>{if(!siteById(c.id))custom.push(c)});store.set("custom",custom);(j.favs||[]).forEach(x=>favs.add(x));store.set("favs",[...favs]);renderLog();renderPicker();fillSpotSelect();toast("Backup restored.")}catch(x){toast("That file isn't a Crab Report backup.")}};r.readAsText(f);e.target.value=""});
+
+/* ============================== RULES ============================== */
+function renderRules(){
+  const now=pacNow(),s=seasonInfo(SITES[0],now);
+  $("tab-rules").innerHTML='<div class="alert '+(s.open?"good":"bad")+'"><div><b>'+(s.open?"Season open":"Season closed")+".</b> <span>"+(s.open?"Recreational Dungeness is open through "+s.closes+" south of the Mendocino county line (July 30 north of it).":"Reopens "+fmtDate(s.nextOpen)+".")+"</span></div></div>"+
+  '<div class="card rules"><h2>The rules, short version</h2><dl>'+RULES.items.map(r=>"<dt>"+r[0]+"</dt><dd>"+r[1]+"</dd>").join("")+'</dl><p class="fine" style="margin-top:14px">'+RULES.asOf+"</p></div>"+
+  '<div class="card"><h2>Check before you go</h2><div class="btns">'+RULES.links.map(l=>'<a class="btn" target="_blank" rel="noopener" href="'+l[1]+'">'+esc(l[0])+"</a>").join("")+"</div>"+(RULES.hotline?'<p class="fine" style="margin-top:10px">'+RULES.hotline+"</p>":"")+"</div>"+
+  '<div class="card"><h2>How the score works</h2><p>Each hour gets a score out of 100 for shore crabbing at that spot.</p><ul class="tips"><li><b>Tide and current (42%)</b>. Crabs feed and gear stays put around slack water. High slack and the last of the incoming score best. Big tide swings and very low water score worst.</li><li><b>Swell (28%)</b>. Ocean swell scaled to how exposed the spot is. Over about 8 ft at the water\'s edge the score is capped as unsafe.</li><li><b>Hours</b>. Suggested windows run 5 am to 10 pm, and daylight only at day-use parks.</li><li><b>Wind (20%)</b>. Sustained wind blended with gusts.</li><li><b>Light (10%)</b>. Dungeness move shallower at dusk and after dark.</li><li><b>Rain runoff</b>. Heavy rain in the last three days takes points off bay and river-mouth spots.</li></ul><p class="fine" style="margin-top:10px">Tides: NOAA predictions. Swell, wind, weather and water temperature: Open-Meteo forecast models. Hazard alerts: National Weather Service. Forecasts are guidance. Look at the water yourself before you set up.</p></div>';
+}
+
+/* ============================== SCENE ANIMATION ============================== */
+const cv=$("scene"),cx=cv.getContext("2d");
+const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const crabs=Array.from({length:5},(_,i)=>({x:120+i*150,dir:i%2?1:-1,ph:i*1.7}));
+const clouds=Array.from({length:6},(_,i)=>({x:i*190+40,y:40+((i*53)%70),s:.7+((i*37)%10)/14}));
+const mix=(a,b,f)=>a.map((v,i)=>Math.round(v+(b[i]-v)*f)),rgb=c=>"rgb("+c.join(",")+")";
+function drawScene(ts){
+  const st=sceneState;if(!st)return;const W=960,Hh=540,t=reduce?0:ts/1000,c=st.c,site=st.site;
+  const day=c.day,eff=clamp(c.eff??1.5,0,12),wind=c.w.wind??5,score=c.score,td=c.tide,cloud=(c.w.cloud??30)/100;
+  // sky
+  const dusk=clamp(1-Math.abs(day-.5)*2)*(day<1&&day>0?1:0);
+  let top=mix([10,22,48],[96,164,206],day),bot=mix([24,44,80],[206,231,240],day);
+  bot=mix(bot,[240,150,96],dusk*.75);top=mix(top,[70,80,130],dusk*.4);
+  if(cloud>.6){const g=(cloud-.6)*1.6;top=mix(top,[110,122,134].map(v=>v*(.35+.65*day)),g*.7);bot=mix(bot,[170,180,188].map(v=>v*(.35+.65*day)),g*.7)}
+  let g=cx.createLinearGradient(0,0,0,330);g.addColorStop(0,rgb(top));g.addColorStop(1,rgb(bot));cx.fillStyle=g;cx.fillRect(0,0,W,Hh);
+  // stars, sun, moon
+  if(day<.5){cx.fillStyle="rgba(255,255,255,"+(.8*(1-day*2)*(1-cloud*.8))+")";for(let i=0;i<50;i++){const x=(i*197)%W,y=(i*89)%230;cx.fillRect(x,y,(i%3?1.5:2.5),(i%3?1.5:2.5))}}
+  const sun=sunFor(site,c.t),sf=(c.t-sun.rise)/(sun.set-sun.rise);
+  if(sf>-.08&&sf<1.08){const sx=80+sf*800,sy=300-Math.sin(clamp(sf)*Math.PI)*240;cx.globalAlpha=1-cloud*.6;cx.fillStyle=dusk>.3?"#ffd08a":"#fff3c4";cx.beginPath();cx.arc(sx,sy,30,0,7);cx.fill();cx.globalAlpha=.25*(1-cloud*.6);cx.beginPath();cx.arc(sx,sy,48,0,7);cx.fill();cx.globalAlpha=1}
+  else{const mp=moon(c.t),mx=700,my=90;cx.globalAlpha=1-cloud*.7;cx.fillStyle="#f2f0e0";cx.beginPath();cx.arc(mx,my,26,0,7);cx.fill();
+    cx.save();cx.beginPath();cx.arc(mx,my,26.5,0,7);cx.clip();cx.fillStyle=rgb(mix(top,[40,52,80],.5));cx.beginPath();cx.arc(mx+(mp.f<.5?-1:1)*52*mp.illum,my,27,0,7);cx.fill();cx.restore();cx.globalAlpha=1}
+  // clouds
+  const nC=Math.round(cloud*6);for(let i=0;i<nC;i++){const cl=clouds[i],x=((cl.x+t*(4+wind*.9))%(W+260))-130;cx.fillStyle="rgba("+(day>.5?"255,255,255":"150,165,185")+","+(.55+.3*cloud)+")";
+    cx.beginPath();cx.ellipse(x,cl.y,70*cl.s,20*cl.s,0,0,7);cx.ellipse(x-35*cl.s,cl.y+8,40*cl.s,15*cl.s,0,0,7);cx.ellipse(x+40*cl.s,cl.y+7,46*cl.s,16*cl.s,0,0,7);cx.fill()}
+  // water level from tide
+  const hgt=td?clamp(td.h,-1.5,7.5):3,wl=318-(hgt+1.5)/9*110,floor=478;
+  // headland
+  cx.fillStyle=rgb(mix([30,36,34],[150,138,92],day));cx.beginPath();cx.moveTo(0,340);cx.lineTo(0,214);cx.bezierCurveTo(90,196,150,222,230,246);cx.bezierCurveTo(290,262,330,300,380,340);cx.fill();
+  // waves
+  const amp=4+eff*4.2,spd=.5+wind*.06;
+  const wave=(x,k,o)=>Math.sin(x*.012*k+t*spd*k+o)*amp*.6+Math.sin(x*.027*k+t*spd*1.6+o*2)*amp*.3+Math.sin(x*.05+t*spd*2.3+o)*amp*.1;
+  const layer=(off,k,o,col)=>{cx.fillStyle=col;cx.beginPath();cx.moveTo(0,Hh);for(let x=0;x<=W;x+=8)cx.lineTo(x,wl+off+wave(x,k,o));cx.lineTo(W,Hh);cx.fill()};
+  layer(-6,.8,1,rgb(mix([16,40,66],[86,150,176],day)));
+  // pier (behind front water)
+  const px=700,deck=176;cx.fillStyle=rgb(mix([28,24,22],[92,70,52],day));
+  cx.fillRect(px-10,deck,280,12);[px,px+110,px+220].forEach(x=>cx.fillRect(x,deck,14,floor-deck));
+  cx.fillRect(px-10,deck-34,5,34);cx.fillRect(px-10,deck-22,280,4);cx.fillRect(px+150,deck-34,5,34);
+  // tide staff on first piling
+  cx.fillStyle="#f4f4ee";cx.fillRect(px+2,208,10,112);cx.font="600 12px 'Barlow Condensed',sans-serif";cx.textAlign="right";
+  for(let f=0;f<=8;f+=2){const y=318-(f+1.5)/9*110;cx.fillStyle="#b3261e";cx.fillRect(px+2,y-1,10,2.5);cx.fillStyle=day>.4?"#12304a":"#dfe9ee";cx.fillText(f+" ft",px-5,y+4)}
+  // flag pole + pennant
+  const fx=px+150,fy=deck-34;cx.fillStyle=rgb(mix([40,40,44],[70,70,76],day));cx.fillRect(fx,fy-78,4,78);
+  const fl=24+clamp(wind/30)*52,droop=clamp(1-wind/14),sgn=(c.w.wdir!=null&&c.w.wdir>20&&c.w.wdir<160)?-1:1;
+  cx.fillStyle="#d83a8f";cx.beginPath();cx.moveTo(fx+2,fy-78);
+  for(let i=0;i<=10;i++){const u=i/10;cx.lineTo(fx+2+sgn*u*fl,fy-78+u*u*droop*34+Math.sin(u*7-t*(3+wind*.4))*(2+wind*.22)*u+u*9)}
+  for(let i=10;i>=0;i--){const u=i/10;cx.lineTo(fx+2+sgn*u*fl,fy-58+u*u*droop*34+Math.sin(u*7-t*(3+wind*.4))*(2+wind*.22)*u-u*9)}cx.fill();
+  // main water
+  layer(4,1,0,rgb(mix([12,34,58],[52,122,152],day)));
+  // under-water body + light
+  g=cx.createLinearGradient(0,wl+20,0,floor);g.addColorStop(0,rgb(mix([10,30,52],[40,108,138],day)));g.addColorStop(1,rgb(mix([6,18,32],[20,66,92],day)));
+  cx.fillStyle=g;cx.beginPath();cx.moveTo(0,Hh);for(let x=0;x<=W;x+=8)cx.lineTo(x,wl+18+wave(x,1.2,2));cx.lineTo(W,Hh);cx.fill();
+  // foam line
+  cx.strokeStyle="rgba(255,255,255,"+(.25+clamp(eff/8)*.5)+")";cx.lineWidth=1.5+eff*.35;cx.beginPath();for(let x=0;x<=W;x+=8){const y=wl+4+wave(x,1,0);x?cx.lineTo(x,y):cx.moveTo(x,y)}cx.stroke();
+  // buoy
+  const bx=250,by=wl+4+wave(bx,1,0),tilt=Math.cos(bx*.012+t*spd)*amp*.012;cx.save();cx.translate(bx,by);cx.rotate(tilt);cx.fillStyle="#c8322b";cx.beginPath();cx.moveTo(-13,2);cx.lineTo(13,2);cx.lineTo(8,-22);cx.lineTo(-8,-22);cx.fill();cx.fillStyle="#f4f4ee";cx.fillRect(-10.5,-12,21,5);cx.fillStyle="#333";cx.fillRect(-1.5,-36,3,14);cx.restore();
+  // seafloor
+  cx.fillStyle=rgb(mix([40,38,30],[196,176,120],day*.8+.1));cx.beginPath();cx.moveTo(0,Hh);cx.lineTo(0,floor+6);for(let x=0;x<=W;x+=40)cx.lineTo(x,floor+Math.sin(x*.02)*5);cx.lineTo(W,Hh);cx.fill();
+  // kelp leaning with the current
+  const rate=td?td.rate*(site.current||1):0,lean=clamp(rate/1.4,-1,1);
+  cx.strokeStyle=rgb(mix([20,50,34],[52,104,60],day));cx.lineWidth=5;cx.lineCap="round";
+  [70,110,480,560,620].forEach((kx,i)=>{const hK=Math.min(90+i*13,floor-wl-30);if(hK<20)return;cx.beginPath();cx.moveTo(kx,floor+2);for(let u=.1;u<=1.01;u+=.1)cx.lineTo(kx+lean*70*u*u+Math.sin(t*1.2+i+u*3)*5*u,floor-hK*u);cx.stroke()});
+  // drifting specks show current
+  cx.fillStyle="rgba(255,255,255,.35)";for(let i=0;i<26;i++){const y=wl+40+((i*47)%Math.max(30,floor-wl-60)),x=(((i*131+t*rate*60)%W)+W)%W;cx.fillRect(x,y,3,1.5)}
+  // hoop net on a rope from the pier
+  const nx=px+70+lean*26+Math.sin(t*.8)*2,ny=floor-4;cx.strokeStyle=day>.4?"#e9d9a4":"#a89c74";cx.lineWidth=2;cx.beginPath();cx.moveTo(px+70,deck);cx.quadraticCurveTo(px+70+lean*10,(deck+ny)/2,nx,ny-16);cx.stroke();
+  cx.beginPath();cx.moveTo(nx,ny-16);cx.lineTo(nx-34,ny);cx.moveTo(nx,ny-16);cx.lineTo(nx+34,ny);cx.stroke();cx.lineWidth=3;cx.strokeStyle="#c9ced2";cx.beginPath();cx.ellipse(nx,ny,36,7,0,0,7);cx.stroke();cx.lineWidth=2;cx.beginPath();cx.ellipse(nx,ny,17,3.5,0,0,7);cx.stroke();
+  // crabs: more of them, and livelier, when the score is higher
+  const n=score>=80?5:score>=65?4:score>=45?3:score>=25?2:1,live=clamp(score/100);
+  for(let i=0;i<n;i++){const cr=crabs[i];if(!reduce&&score>=25){cr.x+=cr.dir*live*.9;if(cr.x>660)cr.dir=-1;if(cr.x<40)cr.dir=1}
+    drawCrab(cr.x,floor-10+(score<25?9:0),t*(4+live*8)+cr.ph,score<25,day)}
+  // rain
+  const rain=c.w.rain||0;if(rain>.005){cx.strokeStyle="rgba(210,225,235,.55)";cx.lineWidth=1.5;cx.beginPath();const nR=Math.min(160,30+rain*900);for(let i=0;i<nR;i++){const x=((i*73+t*240)%(W+80))-40,y=(i*41+t*640)%wl;cx.moveTo(x,y);cx.lineTo(x-6-wind*.3,y+16)}cx.stroke()}
+  if(!reduce)requestAnimationFrame(drawScene);
+}
+function drawCrab(x,y,ph,hiding,day){
+  const body=day>.35?"#c9562f":"#8e4630",dark=day>.35?"#8f3a1c":"#5e2c1c";
+  cx.save();cx.translate(x,y);cx.strokeStyle=dark;cx.lineWidth=3.5;cx.lineCap="round";
+  for(let s=-1;s<=1;s+=2)for(let i=0;i<4;i++){const a=Math.sin(ph+i*1.4+(s>0?1.6:0))*(hiding?0:5);cx.beginPath();cx.moveTo(s*12,2+i*1.5);cx.lineTo(s*(24+i*3),-3+i*3+a*.4);cx.lineTo(s*(30+i*3)+a*.3,9+a*.3);cx.stroke()}
+  for(let s=-1;s<=1;s+=2){const lift=hiding?0:Math.sin(ph*.5+s)*3;cx.beginPath();cx.moveTo(s*14,-4);cx.lineTo(s*26,-13+lift);cx.stroke();cx.fillStyle=body;cx.beginPath();cx.ellipse(s*31,-17+lift,8,5.5,s*-.5,0,7);cx.fill()}
+  cx.fillStyle=body;cx.beginPath();cx.ellipse(0,0,21,12.5,0,0,7);cx.fill();cx.fillStyle=dark;cx.beginPath();cx.ellipse(0,3.5,13,5,0,0,Math.PI);cx.fill();
+  cx.fillStyle="#fff";cx.beginPath();cx.arc(-6,-12,3.6,0,7);cx.arc(6,-12,3.6,0,7);cx.fill();cx.fillStyle="#111";cx.beginPath();cx.arc(-6,-12,1.7,0,7);cx.arc(6,-12,1.7,0,7);cx.fill();
+  cx.restore();
+}
+
+/* ============================== TABS / BOOT ============================== */
+function showTab(name){["today","spots","log","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
+  $("picker").hidden=name!=="today";
+  if(name==="spots")renderSpots();if(name==="log"){fillSpotSelect();renderLog()}if(name==="rules")renderRules()}
+document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){showTab(b.dataset.tab);window.scrollTo(0,0)}});
+let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
+let animStarted=false;
+async function boot(force){
+  try{await loadAll(force);
+    $("mastSub").textContent=fmtDate(pacNow())+" · Shore crabbing forecast";
+    renderToday();if(!$("tab-spots").hidden)renderSpots();
+    if(DATA.stale){$("status").hidden=false;$("status").className="alert fair";$("status").innerHTML="<div><b>Offline.</b> <span>Showing the forecast saved "+Math.round(DATA.stale/6e4)+" minutes ago.</span></div>"}
+    if(!animStarted){animStarted=true;requestAnimationFrame(drawScene)}else if(reduce)drawScene(0);
+  }catch(e){$("today").hidden=true;$("status").hidden=false;$("status").className="alert bad";$("status").innerHTML='<div><b>No signal.</b> <span>Couldn\'t reach the tide and weather services. Check your connection and tap Refresh.</span></div>'}
+}
+$("refresh").addEventListener("click",()=>{toast("Refreshing…");boot(true)});
+const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
+renderPicker();fillSpotSelect();setWhenNow();renderLog();boot(false);
+setInterval(()=>{if(!document.hidden&&!viewOffset&&DATA.loadedAt)renderToday()},5*6e4);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&DATA.loadedAt&&pacNow()-DATA.loadedAt>45*6e4)boot(false)});
+</script>
+</body>
+</html>
