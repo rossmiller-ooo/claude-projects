@@ -62,6 +62,8 @@ button,select,input,textarea{font:inherit;color:inherit}
 .mast h1{font-size:1.5rem}
 .mast .sub{font:500 .85rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.8}
 .alert .btn{margin-top:8px;display:flex}
+.alert.slim{align-items:center;justify-content:space-between;padding:6px 8px 6px 14px;font-size:.92rem;gap:12px}
+.alert.slim .btn{margin:0;flex:none;padding:5px 12px}
 
 /* spot picker */
 .picker{display:flex;gap:8px;overflow-x:auto;padding-block:12px;scrollbar-width:none}
@@ -81,7 +83,7 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .scene{position:relative;border-radius:10px;overflow:hidden;border:2px solid var(--ink);background:#7fb6cf}
 .scene canvas{display:block;width:100%;aspect-ratio:16/9;max-height:400px}
 .scene .where{position:absolute;left:12px;top:10px;font:italic 500 1.05rem var(--f-display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.scene .when{position:absolute;right:12px;top:10px;font:600 .95rem var(--f-data);letter-spacing:.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);text-transform:uppercase}
+.scene .when{position:absolute;left:12px;top:36px;font:600 .95rem var(--f-data);letter-spacing:.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);text-transform:uppercase}
 .scrub{display:flex;align-items:center;gap:10px;margin-top:8px}
 .scrub input{flex:1;min-width:0;accent-color:var(--magenta);height:32px}
 .scrub button{flex:none;border:1.5px solid var(--ink);background:var(--card);border-radius:8px;padding:6px 12px;font:600 .85rem var(--f-data);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
@@ -421,7 +423,7 @@ function seasonInfo(site,ms){
 /* Favorites load first so the report appears fast; the other spots follow in the background.
    A saved forecast is shown immediately and refreshed behind the scenes. */
 const DATA={tide:{},wx:{},sea:{},alerts:{},loadedAt:0,stale:false,usedOld:false};
-const FRESH_MIN=45;
+const FRESH_MIN=90;
 try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.")&&!k.startsWith("crab.c.k3.")).forEach(k=>localStorage.removeItem(k))}catch(e){}
 function fetchJSON(url,ms){return new Promise((res,rej)=>{
   const ac=typeof AbortController!=="undefined"?new AbortController():null;
@@ -431,10 +433,10 @@ function fetchJSON(url,ms){return new Promise((res,rej)=>{
 async function getJSON(url,key,sig,mode,what){
   const c=store.get("c.k3."+key,null),ok=c&&c.sig===sig;
   if(ok&&Date.now()-c.at<FRESH_MIN*6e4)return c.d;
-  if(ok&&mode==="any"&&Date.now()-c.at<36*H){DATA.usedOld=true;return c.d}
+  if(ok&&mode==="any"&&Date.now()-c.at<36*H){DATA.usedOld=true;DATA.oldAge=Math.max(DATA.oldAge||0,Date.now()-c.at);return c.d}
   let err;
   for(let i=0;i<2;i++){try{const d=await fetchJSON(url,i?15000:9000);store.set("c.k3."+key,{at:Date.now(),sig,d});return d}catch(e){err=e;if(e.busy)break}}
-  if(ok){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);return c.d}
+  if(ok){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);DATA.busy=DATA.busy||!!err.busy;return c.d}
   err.what=what;throw err;
 }
 function nearestStation(lat,lon){let b=STATIONS[0],bd=1e9;for(const s of STATIONS){const d=Math.hypot(s.lat-lat,(s.lon-lon)*.78);if(d<bd){bd=d;b=s}}return b.id}
@@ -958,6 +960,8 @@ document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 let animStarted=false;
 let bootRun=0;
+function ago(ms){const m=Math.round(ms/6e4);if(m<1)return"just now";if(m<60)return m+(m===1?" minute ago":" minutes ago");const h=Math.round(m/60);if(h<48)return h+(h===1?" hour ago":" hours ago");const d=Math.round(h/24);return d+" days ago"}
+function staleBar(age){$("status").hidden=false;$("status").className="alert fair slim";$("status").innerHTML='<span>Forecast last updated '+ago(age)+(DATA.busy?' · weather service is busy':'')+'</span><button class="btn small" type="button" data-retry>Update</button>'}
 function setStatus(cls,html,retry){$("status").hidden=false;$("status").className="alert "+cls;$("status").innerHTML="<div>"+html+(retry?'<button class="btn small" type="button" data-retry>Try again</button>':"")+"</div>"}
 function paint(){$("mastSub").textContent=fmtDate(pacNow())+" · Shore crabbing forecast";renderToday();if(!$("tab-spots").hidden)renderSpots();
   if(!animStarted){animStarted=true;requestAnimationFrame(drawScene)}else if(reduce)drawScene(0)}
@@ -975,7 +979,7 @@ function ensureRest(){
 async function boot(force){
   const run=++bootRun,first=firstSites(),rest=allSites().filter(s=>!first.includes(s));
   if(force){try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.k3.")).forEach(k=>localStorage.removeItem(k))}catch(e){}DATA.alerts={}}
-  DATA.stale=false;DATA.usedOld=false;DATA.restErr=null;
+  DATA.stale=false;DATA.usedOld=false;DATA.restErr=null;DATA.oldAge=0;DATA.busy=false;
   const slow=setTimeout(()=>{if(run===bootRun&&!DATA.loadedAt)setStatus("fair","<b>Still hauling.</b> <span>The tide and weather services are slow to answer. Hang on a few seconds.</span>")},5000);
   try{
     await loadSites(first,"fav","any");if(run!==bootRun)return;
@@ -983,18 +987,18 @@ async function boot(force){
     DATA.restP=null;if(!$("tab-spots").hidden)ensureRest();
     paint();
     if(DATA.usedOld){DATA.usedOld=false;await loadSites(first,"fav","fresh");if(run!==bootRun)return;DATA.loadedAt=pacNow();paint()}
-    if(DATA.stale)setStatus("fair","<b>Offline.</b> <span>Showing the forecast saved "+(DATA.stale>2*H?Math.round(DATA.stale/H)+" hours":Math.round(DATA.stale/6e4)+" minutes")+" ago.</span>",true);
+    if(DATA.stale)staleBar(DATA.stale);
   }catch(e){
     if(run!==bootRun)return;
-    if(DATA.loadedAt){setStatus("fair","<b>Couldn't update.</b> <span>Showing the last forecast that loaded.</span>",true)}
+    if(DATA.loadedAt){DATA.busy=DATA.busy||!!e.busy;DATA.stale=DATA.stale||DATA.oldAge||1;staleBar(DATA.oldAge||DATA.stale)}
     else{$("today").hidden=true;setStatus("bad",e.busy?"<b>Forecast service is busy.</b> <span>It's limiting requests right now. Give it a minute.</span>":"<b>No signal.</b> <span>Couldn't reach "+(e.what||"the tide and weather services")+". Check your connection.</span>",true)}
   }finally{clearTimeout(slow)}
 }
-document.addEventListener("click",e=>{if(e.target.closest("[data-retry-rest]")){DATA.restErr=null;renderSpots();return}if(e.target.closest("[data-retry]")){setStatus("fair","<span>Trying again…</span>");boot(false)}});
+document.addEventListener("click",e=>{if(e.target.closest("[data-retry-rest]")){DATA.restErr=null;renderSpots();return}const rb=e.target.closest("[data-retry]");if(rb){if(rb.closest(".slim")){rb.disabled=true;rb.textContent="Updating…"}else setStatus("fair","<span>Trying again…</span>");boot(false)}});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();fillSpotSelect();setWhenNow();renderLog();boot(false);
 setInterval(()=>{if(!document.hidden&&!viewOffset&&DATA.loadedAt&&!document.querySelector('.win[open],[data-day][aria-expanded="true"]'))renderToday()},5*6e4);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&DATA.loadedAt&&pacNow()-DATA.loadedAt>45*6e4)boot(false)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&DATA.loadedAt&&pacNow()-DATA.loadedAt>FRESH_MIN*6e4)boot(false)});
 </script>
 </body>
 </html>
