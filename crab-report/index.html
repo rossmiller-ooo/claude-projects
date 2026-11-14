@@ -59,6 +59,11 @@ button,select,input,textarea{font:inherit;color:inherit}
 .mast{background:var(--deep);color:var(--deep-ink);padding-top:env(safe-area-inset-top,0px)}
 .mast .wrap{display:flex;align-items:center;gap:12px;padding-block:12px}
 .mast svg{flex:none}
+.compass{all:unset;cursor:pointer;flex:none;display:flex;border-radius:50%;-webkit-tap-highlight-color:transparent}
+.compass:focus-visible{outline:3px solid var(--land);outline-offset:3px}
+.compass.spin .rose{animation:roseSpin 1s ease-in-out infinite}
+@keyframes roseSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.compass.spin .rose{animation:none;opacity:.6}}
 .mast h1{font-size:1.5rem}
 .mast .sub{font:500 .85rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.8}
 .alert .btn{margin-top:8px;display:flex}
@@ -205,7 +210,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 </head>
 <body>
 <header class="mast"><div class="wrap">
-  <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#e0489e"/></svg>
+  <button class="compass" id="compass" type="button" aria-label="Update the forecast" title="Update the forecast">  <svg class="rose" width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#e0489e"/></svg></button>
   <div><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Northern California</div></div>
 </div></header>
 
@@ -994,6 +999,8 @@ async function boot(force){
     else{$("today").hidden=true;setStatus("bad",e.busy?"<b>Forecast service is busy.</b> <span>It's limiting requests right now. Give it a minute.</span>":"<b>No signal.</b> <span>Couldn't reach "+(e.what||"the tide and weather services")+". Check your connection.</span>",true)}
   }finally{clearTimeout(slow)}
 }
+$("compass").addEventListener("click",()=>{const b=$("compass");if(b.classList.contains("spin"))return;b.classList.add("spin");
+  const t0=Date.now();boot(true).then(()=>{setTimeout(()=>{b.classList.remove("spin");toast($("status").hidden?"Forecast updated":"Couldn't update right now")},Math.max(0,700-(Date.now()-t0)))})});
 document.addEventListener("click",e=>{if(e.target.closest("[data-retry-rest]")){DATA.restErr=null;renderSpots();return}const rb=e.target.closest("[data-retry]");if(rb){if(rb.closest(".slim")){rb.disabled=true;rb.textContent="Updating…"}else setStatus("fair","<span>Trying again…</span>");boot(false)}});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();fillSpotSelect();setWhenNow();renderLog();boot(false);
