@@ -61,7 +61,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 .mast svg{flex:none}
 .mast h1{font-size:1.5rem}
 .mast .sub{font:500 .85rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.8}
-.mast .refresh{margin-left:auto;background:none;border:1.5px solid rgba(255,255,255,.35);color:inherit;border-radius:8px;padding:8px 12px;font:600 .85rem var(--f-data);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.alert .btn{margin-top:8px;display:flex}
 
 /* spot picker */
 .picker{display:flex;gap:8px;overflow-x:auto;padding-block:12px;scrollbar-width:none}
@@ -156,9 +156,9 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .btn.small{padding:6px 10px;font-size:.9rem}
 
 /* spots */
-.spot{display:grid;grid-template-columns:58px 1fr auto;gap:12px;align-items:start}
+.spot{display:grid;grid-template-columns:62px 1fr auto;gap:12px;align-items:start}
 .spot .sc{font:700 1.6rem/1 var(--f-data);text-align:center;border-radius:8px;padding:10px 0}
-.spot .sc small{display:block;font-size:.62rem;letter-spacing:.08em;margin-top:3px}
+.spot .sc small{display:block;font-size:.62rem;letter-spacing:.04em;margin-top:3px;white-space:nowrap}
 .spot h3 button{all:unset;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .spot .meta{font:600 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase;color:var(--ink2);margin:2px 0 6px}
 .spot .blurb{font-size:.95rem}
@@ -204,7 +204,6 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 <header class="mast"><div class="wrap">
   <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#e0489e"/></svg>
   <div><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Northern California</div></div>
-  <button class="refresh" id="refresh" type="button">Refresh</button>
 </div></header>
 
 <main class="wrap">
@@ -403,6 +402,8 @@ const ymd=ms=>{const d=new Date(ms);return d.getUTCFullYear()+p2(d.getUTCMonth()
 const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function fmtTime(ms){const d=new Date(ms);let h=d.getUTCHours(),m=d.getUTCMinutes();const ap=h<12?"am":"pm";h=h%12||12;return h+(m?":"+p2(m):"")+" "+ap}
 function fmtDay(ms,now){const a=Math.floor(ms/864e5),b=Math.floor(nz(now,pacNow())/864e5);if(a===b)return"Today";if(a===b+1)return"Tomorrow";return DOW[new Date(ms).getUTCDay()]}
+const dayShort=(ms,now)=>fmtDay(ms,now)==="Today"?"TODAY":DOW[new Date(ms).getUTCDay()].toUpperCase();
+const dayLong=(ms,now)=>{const f=fmtDay(ms,now),d=fmtDate(ms);return f==="Today"?"today":f==="Tomorrow"?"tomorrow ("+d+")":d};
 const fmtDate=ms=>{const d=new Date(ms);return DOW[d.getUTCDay()]+" "+MON[d.getUTCMonth()]+" "+d.getUTCDate()};
 
 /* ============================== SEASON ============================== */
@@ -424,14 +425,14 @@ try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.")&&!k.startsWith("
 function fetchJSON(url,ms){return new Promise((res,rej)=>{
   const ac=typeof AbortController!=="undefined"?new AbortController():null;
   const tm=setTimeout(()=>{if(ac)ac.abort();rej(new Error("timeout"))},ms);
-  fetch(url,ac?{signal:ac.signal}:{}).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(d=>{clearTimeout(tm);res(d)},e=>{clearTimeout(tm);rej(e)})})}
+  fetch(url,ac?{signal:ac.signal}:{}).then(r=>{if(!r.ok){const e=new Error("HTTP "+r.status);e.busy=r.status===429;throw e}return r.json()}).then(d=>{clearTimeout(tm);res(d)},e=>{clearTimeout(tm);rej(e)})})}
 /* mode "fresh": use the cache only if recent. mode "any": use whatever is saved (marks DATA.usedOld). */
 async function getJSON(url,key,sig,mode,what){
   const c=store.get("c.k3."+key,null),ok=c&&c.sig===sig;
   if(ok&&Date.now()-c.at<FRESH_MIN*6e4)return c.d;
   if(ok&&mode==="any"&&Date.now()-c.at<36*H){DATA.usedOld=true;return c.d}
   let err;
-  for(let i=0;i<2;i++){try{const d=await fetchJSON(url,i?15000:9000);store.set("c.k3."+key,{at:Date.now(),sig,d});return d}catch(e){err=e}}
+  for(let i=0;i<2;i++){try{const d=await fetchJSON(url,i?15000:9000);store.set("c.k3."+key,{at:Date.now(),sig,d});return d}catch(e){err=e;if(e.busy)break}}
   if(ok){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);return c.d}
   err.what=what;throw err;
 }
@@ -542,7 +543,7 @@ function bestWindows(site,now,hours,max){
   hs.filter(civil).sort((a,b)=>b.score-a.score).forEach(c=>{if(picked.length<max&&c.score>=40&&picked.every(p=>Math.abs(p.t-c.t)>=5*H))picked.push(c)});
   return picked.sort((a,b)=>a.t-b.t).map(c=>{
     // widen to neighbouring hours that stay within 8 points of the peak
-    let a=c.t,b=c.t+H;const at=t=>hs.find(x=>x.t===t);
+    let a=c.t,b=c.t+H;const at=t=>{const x=hs.find(x=>x.t===t);return x&&civil(x)?x:null};
     while(at(a-H)&&at(a-H).score>=c.score-8&&c.t-a<2*H)a-=H;
     while(at(b)&&at(b).score>=c.score-8&&b-c.t<3*H)b+=H;
     return{...c,from:Math.max(a,now-(now%H?0:0)),to:b}});
@@ -600,7 +601,7 @@ function gaugeSVG(sc,g){
 function renderToday(){
   const site=siteById(current);if(!site||!DATA.loadedAt)return;
   if(!hasData(site)){$("today").hidden=true;setStatus("fair","<span>Hauling in the forecast for "+esc(site.name)+"…</span>");
-    (DATA.restP||Promise.resolve()).then(()=>hasData(site)?null:loadSites([site],"one."+site.id,"any")).then(()=>{if(current===site.id&&hasData(site))renderToday()},e=>{if(current===site.id)setStatus("bad","<b>No signal.</b> <span>Couldn't reach "+(e.what||"the forecast services")+". Tap Refresh.</span>")});return}
+    (DATA.restP||(store.get("c.k3.wx.rest",null)?ensureRest():Promise.resolve())).then(()=>hasData(site)?null:loadSites([site],"one."+site.id,"any")).then(()=>{if(current===site.id&&hasData(site))renderToday()},e=>{if(current===site.id)setStatus("bad","<b>No signal.</b> <span>Couldn't reach "+(e.what||"the forecast services")+".</span>",true)});return}
   const now=pacNow(),t=viewOffset?Math.floor(now/H)*H+viewOffset*H:now,c=cond(site,t),g=grade(c.score);
   if(!DATA.stale)$("status").hidden=true;$("today").hidden=false;
   $("sceneWhere").textContent=site.name;
@@ -719,15 +720,18 @@ $("nowBtn").addEventListener("click",()=>{viewOffset=0;$("scrub").value=0;render
 /* ============================== RENDER: SPOTS ============================== */
 function renderSpots(){
   const el=$("tab-spots"),now=pacNow(),ready=!!DATA.loadedAt;
-  const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w}});
+  const missing=ready&&allSites().some(s=>!hasData(s));if(missing&&!DATA.restErr)ensureRest();
+  const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w,ok}});
   rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||((b.w?b.w.score:b.c?b.c.score:0)-(a.w?a.w.score:a.c?a.c.score:0)));
   const bet=ready?rows.filter(r=>!favs.has(r.s.id)&&r.w&&!r.s.custom&&!r.s.advisory).sort((a,b)=>b.w.score-a.w.score)[0]:null;
   const favBest=ready?Math.max(0,...rows.filter(r=>favs.has(r.s.id)&&r.w).map(r=>r.w.score)):0;
   let h="";
-  if(bet&&bet.w.score>=55)h+='<div class="bet"><div class="lbl" style="color:inherit">Somewhere new to try</div><h2>'+esc(bet.s.name)+"</h2><p>Scores "+bet.w.score+" "+fmtDay(bet.w.from,now).toLowerCase()+" around "+fmtTime(bet.w.t)+(bet.w.score>favBest+4?", better than your favorites ("+favBest+")":"")+". "+esc(bet.s.blurb||"")+'</p><button class="btn" type="button" data-go="'+bet.s.id+'">See the full report</button></div>';
-  h+=rows.map(({s,c,w})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
-    return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?"BEST 36H":"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'">'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
-      (w?'<p class="blurb"><b>'+fmtDay(w.from,now)+" "+fmtTime(w.from)+"–"+fmtTime(w.to)+"</b>"+(c?" · now "+c.score:"")+"</p>":"")+
+  if(bet&&bet.w.score>=55)h+='<div class="bet"><div class="lbl" style="color:inherit">Somewhere new to try</div><h2>'+esc(bet.s.name)+"</h2><p>Scores "+bet.w.score+" "+dayLong(bet.w.t,now)+" around "+fmtTime(bet.w.t)+(bet.w.score>favBest+4?", better than your favorites ("+favBest+")":"")+". "+esc(bet.s.blurb||"")+'</p><button class="btn" type="button" data-go="'+bet.s.id+'">See the full report</button></div>';
+  h+='<p class="fine">Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm. Tap a name for the full report.</p>';
+  if(missing)h+=DATA.restErr?'<div class="alert fair"><div><b>Some spots didn\'t load.</b> <span>'+(DATA.restErr.busy?"The forecast service is busy. Give it a minute.":"Couldn't reach "+(DATA.restErr.what||"the forecast services")+".")+'</span><button class="btn small" type="button" data-retry-rest>Try again</button></div></div>':'<div class="alert fair"><span>Hauling in the other spots…</span></div>';
+  h+=rows.map(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
+    return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?dayShort(w.t,now)+" "+fmtTime(w.t).replace(" ","").toUpperCase():"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'">'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
+      (w?'<p class="blurb"><b>Best time: '+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</b>"+(c?" · right now "+c.score:"")+"</p>":ok?'<p class="blurb"><b>No good window in the next 36 hours</b>'+(c?" · right now "+c.score:"")+"</p>":"")+
       (s.blurb?'<p class="blurb" style="margin-top:4px">'+esc(s.blurb)+"</p>":"")+
       (s.buzz?'<p class="fine" style="margin-top:4px">'+esc(s.buzz)+"</p>":"")+(s.advisory?'<p class="fine t-bad" style="margin-top:4px;font-weight:600">'+esc(s.advisory)+"</p>":"")+
       '<div class="btns">'+mapLinks(s,true)+(s.custom?'<button class="btn small" type="button" data-rmspot="'+s.id+'">Remove</button>':"")+"</div></div>"+starBtn(s)+"</div>"}).join("");
@@ -933,31 +937,39 @@ document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 let animStarted=false;
 let bootRun=0;
-function setStatus(cls,html){$("status").hidden=false;$("status").className="alert "+cls;$("status").innerHTML="<div>"+html+"</div>"}
+function setStatus(cls,html,retry){$("status").hidden=false;$("status").className="alert "+cls;$("status").innerHTML="<div>"+html+(retry?'<button class="btn small" type="button" data-retry>Try again</button>':"")+"</div>"}
 function paint(){$("mastSub").textContent=fmtDate(pacNow())+" · Shore crabbing forecast";renderToday();if(!$("tab-spots").hidden)renderSpots();
   if(!animStarted){animStarted=true;requestAnimationFrame(drawScene)}else if(reduce)drawScene(0)}
+/* The other spots are only fetched when they're wanted (the Spots tab), which keeps
+   everyday loads small and well inside the free forecast service's request limits. */
+function ensureRest(){
+  if(DATA.restP||!DATA.loadedAt)return DATA.restP||Promise.resolve();
+  const run=bootRun,first=firstSites(),rest=allSites().filter(s=>!first.includes(s));
+  if(!rest.length)return DATA.restP=Promise.resolve();
+  const show=()=>{if(run===bootRun&&!$("tab-spots").hidden)renderSpots()};
+  return DATA.restP=loadSites(rest,"rest","any").then(()=>{show();
+    if(DATA.usedOld){DATA.usedOld=false;return loadSites(rest,"rest","fresh").then(show,()=>{})}},
+    e=>{if(run===bootRun){DATA.restP=null;DATA.restErr=e;show()}});
+}
 async function boot(force){
   const run=++bootRun,first=firstSites(),rest=allSites().filter(s=>!first.includes(s));
   if(force){try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.k3.")).forEach(k=>localStorage.removeItem(k))}catch(e){}DATA.alerts={}}
-  DATA.stale=false;DATA.usedOld=false;
+  DATA.stale=false;DATA.usedOld=false;DATA.restErr=null;
   const slow=setTimeout(()=>{if(run===bootRun&&!DATA.loadedAt)setStatus("fair","<b>Still hauling.</b> <span>The tide and weather services are slow to answer. Hang on a few seconds.</span>")},5000);
   try{
     await loadSites(first,"fav","any");if(run!==bootRun)return;
     DATA.loadedAt=pacNow();
-    // the remaining spots load quietly for the Spots tab
-    DATA.restP=rest.length?loadSites(rest,"rest","any").then(()=>{if(run===bootRun&&!$("tab-spots").hidden)renderSpots()},()=>{}):Promise.resolve();
+    DATA.restP=null;if(!$("tab-spots").hidden)ensureRest();
     paint();
     if(DATA.usedOld){DATA.usedOld=false;await loadSites(first,"fav","fresh");if(run!==bootRun)return;DATA.loadedAt=pacNow();paint()}
-    if(DATA.stale)setStatus("fair","<b>Offline.</b> <span>Showing the forecast saved "+(DATA.stale>2*H?Math.round(DATA.stale/H)+" hours":Math.round(DATA.stale/6e4)+" minutes")+" ago. Tap Refresh to try again.</span>");
+    if(DATA.stale)setStatus("fair","<b>Offline.</b> <span>Showing the forecast saved "+(DATA.stale>2*H?Math.round(DATA.stale/H)+" hours":Math.round(DATA.stale/6e4)+" minutes")+" ago.</span>",true);
   }catch(e){
     if(run!==bootRun)return;
-    if(DATA.loadedAt){setStatus("fair","<b>Couldn't update.</b> <span>Showing the last forecast that loaded. Tap Refresh to try again.</span>")}
-    else{$("today").hidden=true;setStatus("bad","<b>No signal.</b> <span>Couldn't reach "+(e.what||"the tide and weather services")+". Check your connection and tap Refresh.</span>")}
+    if(DATA.loadedAt){setStatus("fair","<b>Couldn't update.</b> <span>Showing the last forecast that loaded.</span>",true)}
+    else{$("today").hidden=true;setStatus("bad",e.busy?"<b>Forecast service is busy.</b> <span>It's limiting requests right now. Give it a minute.</span>":"<b>No signal.</b> <span>Couldn't reach "+(e.what||"the tide and weather services")+". Check your connection.</span>",true)}
   }finally{clearTimeout(slow)}
-  if(rest.length&&DATA.loadedAt&&run===bootRun){await DATA.restP;
-    if(DATA.usedOld&&run===bootRun){DATA.usedOld=false;try{await loadSites(rest,"rest","fresh");if(run===bootRun){if(!$("tab-spots").hidden)renderSpots();const c=siteById(current);if(c&&!first.includes(c)&&!$("tab-today").hidden&&!viewOffset)renderToday()}}catch(e){}}}
 }
-$("refresh").addEventListener("click",()=>{toast("Refreshing…");boot(true)});
+document.addEventListener("click",e=>{if(e.target.closest("[data-retry-rest]")){DATA.restErr=null;renderSpots();return}if(e.target.closest("[data-retry]")){setStatus("fair","<span>Trying again…</span>");boot(false)}});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();fillSpotSelect();setWhenNow();renderLog();boot(false);
 setInterval(()=>{if(!document.hidden&&!viewOffset&&DATA.loadedAt&&!document.querySelector('.win[open],[data-day][aria-expanded="true"]'))renderToday()},5*6e4);
