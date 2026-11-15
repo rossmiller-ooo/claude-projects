@@ -24,7 +24,8 @@
   --line:#b9ccd6;         /* sounding lines */
   --land:#ead9a4;         /* chart land buff */
   --land-ink:#5a4a14;
-  --magenta:#a8246f;      /* chart magenta: nav aids, active state */
+  --accent:#1f5f80;       /* chart sea blue: selected time, links */
+  --brass:#a87a1f;        /* compass brass: favorite stars */
   --good:#1f7a4d; --fair:#a86a00; --bad:#b3261e;
   --good-bg:#dcefe3; --fair-bg:#f6e7c4; --bad-bg:#f6d9d5;
   --deep:#12304a; --deep-ink:#f2f6f8;
@@ -35,7 +36,7 @@
 }
 @media (prefers-color-scheme:dark){:root{
   --water:#0a1a28; --card:#11283a; --ink:#e1ecf1; --ink2:#9db4c2; --line:#2a465a;
-  --land:#3d3618; --land-ink:#ecdca4; --magenta:#f07fc0;
+  --land:#3d3618; --land-ink:#ecdca4; --accent:#8fc3dc; --brass:#dfc06a;
   --good:#63d39a; --fair:#f0bd5a; --bad:#ff8a80;
   --good-bg:#123a28; --fair-bg:#40300c; --bad-bg:#4a1c18;
   --deep:#06121c; --deep-ink:#e1ecf1; color-scheme:dark;
@@ -48,9 +49,9 @@ body{margin:0;background:var(--water);color:var(--ink);font:17px/1.45 var(--f-bo
 h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.15}
 h2{font-size:1.35rem} h3{font-size:1.1rem}
 p{margin:0}
-a{color:var(--magenta)}
+a{color:var(--accent)}
 button,select,input,textarea{font:inherit;color:inherit}
-:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .lbl{font:600 .78rem/1.2 var(--f-data);letter-spacing:.09em;text-transform:uppercase;color:var(--ink2)}
 .num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
@@ -75,7 +76,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--card)}
 .chip.more{border-style:dashed;color:var(--ink2);border-color:var(--ink2)}
 .chip.more[aria-pressed="true"]{border-style:solid;color:var(--card);border-color:var(--ink)}
-.chip .st{color:var(--magenta);margin-right:4px}
+.chip .st{color:var(--brass);margin-right:4px}
 .chip[aria-pressed="true"] .st{color:inherit}
 
 main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
@@ -95,18 +96,18 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .tl-scroll.drag{cursor:grabbing}
 .tl-scroll svg{display:block;height:52px}
 .tl-scroll svg text{font:600 11px var(--f-data);letter-spacing:.04em;fill:var(--ink2);text-transform:uppercase}
-.tl-needle{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--magenta);pointer-events:none}
-.tl-needle::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:var(--magenta);border-bottom:0}
-.tl:has(.tl-scroll:focus-visible){outline:3px solid var(--magenta);outline-offset:2px}
-.viewing{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--magenta);color:var(--card);border-radius:10px;padding:7px 8px 7px 14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-.viewing small{display:block;font:600 .72rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
-.viewing .btn{flex:none;padding:6px 12px;background:var(--card);color:var(--ink);border-color:var(--card)}
+.tl-needle{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--accent);pointer-events:none}
+.tl-needle::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:var(--accent);border-bottom:0}
+.tl:has(.tl-scroll:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+.viewing{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;padding:7px 8px 7px 14px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.viewing small{display:block;font:600 .72rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.viewing .btn{flex:none;padding:6px 12px;background:var(--ink);color:var(--card);border-color:var(--ink)}
 .viewing.atnow .btn{visibility:hidden}
 .viewing.flash{animation:flash .9s ease-out}
-@keyframes flash{0%{transform:scale(1.03);box-shadow:0 0 0 6px color-mix(in srgb,var(--magenta) 35%,transparent)}100%{transform:none}}
+@keyframes flash{0%{transform:scale(1.03);box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 30%,transparent)}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){.viewing.flash{animation:none}}
 .whybox{grid-column:1/-1;border-top:1.5px solid var(--line);padding-top:8px}
-.whybox summary{cursor:pointer;font-weight:600;color:var(--magenta);list-style:none}
+.whybox summary{cursor:pointer;font-weight:600;color:var(--accent);list-style:none}
 .whybox summary::-webkit-details-marker{display:none}
 .whybox summary::after{content:" ›";display:inline-block;transition:transform .15s}
 .whybox[open] summary::after{transform:rotate(90deg)}
@@ -148,7 +149,7 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .windows{display:flex;flex-direction:column;gap:8px}
 .win{border:1.5px solid var(--line);border-radius:8px;display:grid;grid-template-columns:52px 1fr 18px;gap:12px;align-items:center;padding:10px;width:100%;text-align:left;background:none;font:inherit;color:inherit;cursor:pointer}
 .win .chev{color:var(--ink2);font-size:1.1rem}
-.win[aria-pressed="true"],button.day[aria-pressed="true"]{border-color:var(--magenta);box-shadow:inset 0 0 0 1.5px var(--magenta)}
+.win[aria-pressed="true"],button.day[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .brk{padding:2px 0 4px}
 .brk .f{display:grid;grid-template-columns:62px 1fr 46px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.93rem}
 .brk .f b{font:700 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
@@ -172,8 +173,7 @@ button.day{font:inherit;color:inherit;background:none;cursor:pointer}
 ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink);background:var(--card);color:var(--ink);border-radius:8px;padding:10px 14px;font-weight:600;text-decoration:none;cursor:pointer}
-.btn.primary{background:var(--magenta);border-color:var(--magenta);color:#fff}
-@media (prefers-color-scheme:dark){.btn.primary{color:#1a0611}}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--card)}
 .btn.small{padding:6px 10px;font-size:.9rem}
 
 /* spots */
@@ -185,7 +185,7 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .spot .blurb{font-size:.95rem}
 .spot .btns{margin-top:10px}
 .star{all:unset;cursor:pointer;font-size:1.9rem;line-height:1;color:var(--line);padding:2px 6px}
-.star[aria-pressed="true"]{color:var(--magenta)}
+.star[aria-pressed="true"]{color:var(--brass)}
 .fav{background:linear-gradient(0deg,var(--card),var(--card)) padding-box;border-color:var(--land-ink);box-shadow:inset 6px 0 0 var(--land)}
 .bet{background:var(--land);color:var(--land-ink);border-radius:10px;padding:14px 16px}
 .bet h2{color:inherit;margin-bottom:4px}
@@ -223,7 +223,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 </head>
 <body>
 <header class="mast"><div class="wrap">
-  <button class="compass" id="compass" type="button" aria-label="Update the forecast" title="Update the forecast">  <svg class="rose" width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#e0489e"/></svg></button>
+  <button class="compass" id="compass" type="button" aria-label="Update the forecast" title="Update the forecast">  <svg class="rose" width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#c8573a"/></svg></button>
   <div><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Northern California</div></div>
 </div></header>
 
@@ -695,7 +695,7 @@ function renderChart(site,now,sel){
   s+='<path d="'+d+"L"+X(t1)+" "+Y(lo)+"L"+X(t0)+" "+Y(lo)+'Z" fill="var(--ink)" opacity=".1"/><path d="'+d+'" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>';
   e.filter(p=>p.t>t0+H&&p.t<t1-H).forEach(p=>{s+='<circle cx="'+X(p.t)+'" cy="'+Y(p.v)+'" r="3.5" fill="var(--card)" stroke="var(--ink)" stroke-width="2"/><text x="'+X(p.t)+'" y="'+(Y(p.v)+(p.hi?-9:17))+'" text-anchor="middle" style="fill:var(--ink);font-weight:600">'+p.v.toFixed(1)+" · "+fmtTime(p.t).replace(" ","")+"</text>"});
   const td=tideAt(site,sel);
-  if(td)s+='<line x1="'+X(sel)+'" x2="'+X(sel)+'" y1="'+(T-6)+'" y2="'+(Hh-B)+'" stroke="var(--magenta)" stroke-width="2"/><circle cx="'+X(sel)+'" cy="'+Y(td.h)+'" r="5.5" fill="var(--magenta)" stroke="var(--card)" stroke-width="2"/><text x="'+Math.min(W-R-20,Math.max(L+20,X(sel)))+'" y="12" text-anchor="middle" style="fill:var(--magenta);font-weight:700">'+(sel===now?"NOW":(far?DOW[new Date(sel).getUTCDay()].toUpperCase()+" ":"")+fmtTime(sel).toUpperCase())+"</text>";
+  if(td)s+='<line x1="'+X(sel)+'" x2="'+X(sel)+'" y1="'+(T-6)+'" y2="'+(Hh-B)+'" stroke="var(--accent)" stroke-width="2"/><circle cx="'+X(sel)+'" cy="'+Y(td.h)+'" r="5.5" fill="var(--accent)" stroke="var(--card)" stroke-width="2"/><text x="'+Math.min(W-R-20,Math.max(L+20,X(sel)))+'" y="12" text-anchor="middle" style="fill:var(--accent);font-weight:700">'+(sel===now?"NOW":(far?DOW[new Date(sel).getUTCDay()].toUpperCase()+" ":"")+fmtTime(sel).toUpperCase())+"</text>";
   $("tideChart").innerHTML=s;
 }
 function renderGear(site,c){
