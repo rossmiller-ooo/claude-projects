@@ -208,6 +208,11 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .fav{background:linear-gradient(0deg,var(--card),var(--card)) padding-box;border-color:var(--land-ink);box-shadow:inset 6px 0 0 var(--land)}
 .linkbtn{all:unset;cursor:pointer;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
 .linkbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mapprev{position:relative;height:clamp(200px,36vw,260px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--water);isolation:isolate}
+.mapprev #prevMap{position:absolute;inset:0;pointer-events:none;z-index:0}
+.mapprev-lbl{position:absolute;left:10px;bottom:10px;z-index:1;background:var(--deep);color:var(--deep-ink);border-radius:8px;padding:8px 14px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.mapprev:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mapprev .leaflet-control-attribution{font-size:9px}
 #spotsMap{height:min(68vh,560px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--water);z-index:0}
 .mk{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;white-space:nowrap;cursor:pointer}
 .mk b{font:700 1.05rem/1 var(--f-data);min-width:34px;text-align:center;padding:5px 7px;border-radius:8px;border:2px solid #12304a;box-shadow:0 1px 4px rgba(0,0,0,.35)}
@@ -291,7 +296,8 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
   </section>
 
   <section id="tab-spots" hidden>
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="linkbtn" type="button" id="mapToggle">Map view</button><button class="btn small" type="button" id="mapZoom" hidden>Whole coast</button></div>
+    <div class="mapprev" id="mapPrev" role="button" tabindex="0" aria-label="Open the map view"><div id="prevMap"></div><span class="mapprev-lbl">Map view <span aria-hidden="true">›</span></span></div>
+    <div id="mapBar" hidden style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="linkbtn" type="button" id="mapToggle">List view</button><button class="btn small" type="button" id="mapZoom">Whole coast</button></div>
     <div id="spotsMapBox" hidden><div class="opts" id="mapMode" role="group" aria-label="Scores to show" style="margin:0 0 10px"><button class="chip" type="button" data-m="best" aria-pressed="true">Best in next 36 hrs</button><button class="chip" type="button" data-m="now" aria-pressed="false">Right now</button></div><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" id="mapNote" style="margin-top:6px"></p></div>
     <div id="spotsList" style="display:flex;flex-direction:column;gap:16px"></div>
   </section>
@@ -826,17 +832,28 @@ function loadLeaflet(){return leafP||(leafP=new Promise((res,rej)=>{const l=docu
   const sc=document.createElement("script");sc.src="vendor/leaflet/leaflet.js";sc.onload=res;sc.onerror=()=>{leafP=null;rej(new Error("map"))};document.head.appendChild(sc)}))}
 function mapBounds(){const all=allSites(),fv=all.filter(s=>favs.has(s.id)),set=mapWide||!fv.length?all:fv;
   return L.latLngBounds(set.map(s=>[s.lat,s.lon])).pad(mapWide?.12:.22)}
+function spotMarker(row,mode,now,popup){const {s,c,w:wBest,ok}=row,w=mode==="now"?null:wBest,sc=w?w.score:c?c.score:null,g=sc==null?"n":grade(sc).c[0],fav=favs.has(s.id);
+  const m=L.marker([s.lat,s.lon],{interactive:popup,icon:L.divIcon({className:"",iconSize:[0,0],html:'<div class="mk'+(fav?" favm":"")+'"><b class="'+g+'">'+(sc==null?"–":sc)+"</b><span>"+(fav?"★ ":"")+esc(s.short||s.name)+"</span></div>"}),zIndexOffset:(fav?2000:0)+(sc||0)*10,keyboard:popup,title:s.name});
+  if(popup)m.bindPopup("<h3>"+esc(s.name)+"</h3>"+(w?"<div><b>"+w.score+" "+grade(w.score).w+"</b> · "+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</div>":mode==="now"&&c?"<div><b>"+c.score+" "+grade(c.score).w+"</b> · right now"+(wBest?"<br>Best in 36 hrs: "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</div>":ok?"<div>No good window in the next 36 hours"+(c?" · right now "+c.score:"")+"</div>":"")+(s.advisory?'<div style="color:#b3261e;font-weight:600;margin-top:4px">Closed by health order. Check CDFW.</div>':"")+'<button class="btn small" type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+">See the full report</button>",{maxWidth:250,offset:[0,-34]});
+  return m}
+/* Preview on the Spots tab: a still map of the Bodega Harbor to Dillon Beach stretch. Tap it to open the full map. */
+let prev=null,prevLayer=null;
+async function drawPrev(){
+  if(mapOn||$("tab-spots").hidden)return;
+  try{await loadLeaflet()}catch(e){return}   // no signal: the card still works as a plain button
+  if(!prev){prev=L.map("prevMap",{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,zoomSnap:.25});
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"&copy; OpenStreetMap"}).addTo(prev);prev.attributionControl.setPrefix(false);prevLayer=L.layerGroup().addTo(prev)}
+  prev.invalidateSize();prev.fitBounds([[38.222,-123.075],[38.335,-122.945]],{paddingTopLeft:[10,46],paddingBottomRight:[10,6]});
+  prevLayer.clearLayers();const now=pacNow();const fr=spotRows.filter(r=>favs.has(r.s.id));(fr.length?fr:spotRows).forEach(r=>spotMarker(r,"best",now,false).addTo(prevLayer));
+}
 function drawMap(){
   $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 36 hours.")+" Tap one for details. Zoom in to see every spot's name.";
   if(!map||!window.L)return;const now=pacNow();mapLayer.clearLayers();
-  spotRows.forEach(({s,c,w:wBest,ok})=>{const w=mapMode==="now"?null:wBest,sc=w?w.score:c?c.score:null,g=sc==null?"n":grade(sc).c[0],fav=favs.has(s.id);
-    const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",iconSize:[0,0],html:'<div class="mk'+(fav?" favm":"")+'"><b class="'+g+'">'+(sc==null?"–":sc)+"</b><span>"+(fav?"★ ":"")+esc(s.short||s.name)+"</span></div>"}),zIndexOffset:(fav?2000:0)+(sc||0)*10,keyboard:true,title:s.name});
-    m.bindPopup("<h3>"+esc(s.name)+"</h3>"+(w?"<div><b>"+w.score+" "+grade(w.score).w+"</b> · "+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</div>":mapMode==="now"&&c?"<div><b>"+c.score+" "+grade(c.score).w+"</b> · right now"+(wBest?"<br>Best in 36 hrs: "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</div>":ok?"<div>No good window in the next 36 hours"+(c?" · right now "+c.score:"")+"</div>":"")+(s.advisory?'<div style="color:#b3261e;font-weight:600;margin-top:4px">Closed by health order. Check CDFW.</div>':"")+'<button class="btn small" type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+">See the full report</button>",{maxWidth:250,offset:[0,-34]});
-    m.addTo(mapLayer)});
+  spotRows.forEach(r=>spotMarker(r,mapMode,now,true).addTo(mapLayer));
 }
 async function showMap(on){
-  mapOn=on;$("mapToggle").textContent=on?"List view":"Map view";$("spotsMapBox").hidden=!on;$("spotsList").hidden=on;$("mapZoom").hidden=!on;
-  if(!on)return;
+  mapOn=on;$("mapPrev").hidden=on;$("mapBar").hidden=!on;$("spotsMapBox").hidden=!on;$("spotsList").hidden=on;
+  if(!on){drawPrev();return}
   try{await loadLeaflet()}catch(e){toast("Couldn't load the map. Check your connection.");showMap(false);return}
   if(!map){map=L.map("spotsMap",{zoomControl:true,attributionControl:true,scrollWheelZoom:true});
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
@@ -844,7 +861,8 @@ async function showMap(on){
     const nm=()=>$("spotsMap").classList.toggle("names",map.getZoom()>=13);map.on("zoomend",nm);map.fitBounds(mapBounds(),{maxZoom:13});nm()}
   map.invalidateSize();drawMap();
 }
-$("mapToggle").addEventListener("click",()=>showMap(!mapOn));
+$("mapToggle").addEventListener("click",()=>showMap(false));
+$("mapPrev").addEventListener("click",()=>showMap(true));$("mapPrev").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showMap(true)}});
 $("mapMode").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;mapMode=b.dataset.m;$("mapMode").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));drawMap()});
 $("mapZoom").addEventListener("click",()=>{mapWide=!mapWide;$("mapZoom").textContent=mapWide?"Near favorites":"Whole coast";if(map)map.fitBounds(mapBounds(),{maxZoom:13})});
 
@@ -854,7 +872,7 @@ function renderSpots(){
   const missing=ready?custom.filter(s=>!hasData(s)):[];if(missing.length)loadCustom(missing).then(()=>{if(!$("tab-spots").hidden)renderSpots()},()=>{});
   const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w,ok}});
   rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||((b.w?b.w.score:b.c?b.c.score:0)-(a.w?a.w.score:a.c?a.c.score:0)));
-  spotRows=rows;if(mapOn)drawMap();
+  spotRows=rows;if(mapOn)drawMap();else drawPrev();
   let h="";
   h+='<p class="fine">Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm. Tap a name for the full report.</p>';
   h+=rows.map(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
