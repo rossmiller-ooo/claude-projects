@@ -93,7 +93,19 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 /* scene */
 .scene{position:relative;border-radius:10px;overflow:hidden;border:2px solid var(--ink);background:#7fb6cf}
 .scene canvas{display:block;width:100%;aspect-ratio:16/9;max-height:400px}
-.scene .where{position:absolute;left:12px;top:10px;font:italic 500 1.05rem var(--f-display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.scene .where{position:absolute;left:12px;top:8px;right:120px;font:700 clamp(1.3rem,5vw,1.8rem)/1.1 var(--f-display);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75),0 0 10px rgba(0,0,0,.35)}
+.haz{position:absolute;left:10px;top:calc(8px + clamp(1.3rem,5vw,1.8rem)*1.1 + 8px);display:flex;flex-direction:column;gap:5px}
+.haz button{all:unset;cursor:pointer;width:36px;height:36px;display:grid;place-items:center;border-radius:8px;background:rgba(10,24,38,.45);position:relative}
+.haz button svg{width:28px;height:28px;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+.haz button[aria-expanded="true"]{background:rgba(255,255,255,.92)}
+.haz button:focus-visible{outline:3px solid #fff;outline-offset:1px}
+.haz .more{font:700 .95rem var(--f-data);color:#fff}
+.haz button[aria-expanded="true"].more{color:#12304a}
+.hazbox{position:absolute;left:56px;right:10px;max-width:420px;top:calc(8px + clamp(1.3rem,5vw,1.8rem)*1.1 + 8px);max-height:calc(100% - 60px);overflow:auto;background:var(--card);color:var(--ink);border:1.5px solid var(--ink);border-radius:10px;padding:10px 12px;font-size:.92rem;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.hazbox h4{margin:0 0 2px;font:700 .82rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
+.hazbox .it+.it{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.hazbox .x{all:unset;cursor:pointer;float:right;margin:-4px -4px 0 8px;padding:4px 8px;font-size:1.2rem;line-height:1;color:var(--ink2)}
+@media (max-width:480px){.haz button{width:30px;height:30px}.haz button svg{width:24px;height:24px}.haz{gap:4px}.hazbox{left:48px}}
 .scrub{display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:start;margin-top:8px}
 .scrub .step{border:1.5px solid var(--ink);background:var(--card);border-radius:8px;height:55px;font:700 1.2rem/1 var(--f-data);cursor:pointer;color:var(--ink)}
 .scrub .step:disabled{opacity:.35;cursor:default}
@@ -235,6 +247,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
         <div class="scene">
           <canvas id="scene" width="960" height="540" role="img" aria-label="Animated view of the water at this spot"></canvas>
           <div class="where" id="sceneWhere"></div>
+          <div class="haz" id="haz" role="group" aria-label="Hazards and warnings"></div><div class="hazbox" id="hazBox" hidden role="dialog" aria-label="Warning details"></div>
         </div>
         <div class="scrub">
           <button type="button" class="step" id="stepBack" aria-label="One hour earlier">‹</button>
@@ -248,8 +261,6 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
         <div><div class="lbl" id="vLbl">Crabbing outlook</div><div class="word" id="vWord"></div><p class="why" id="vWhy"></p></div>
         <details class="whybox" id="whyBox"><summary>Why this score?</summary><div id="whyBody"></div></details>
       </div>
-
-      <div id="alerts" style="display:flex;flex-direction:column;gap:8px"></div>
 
       <div class="grid" id="inst"></div>
 
@@ -652,17 +663,45 @@ function moon(t){const syn=29.530588853,ref=Date.UTC(2000,0,6,10,14);const age=(
   const names=["New moon","Waxing crescent","First quarter","Waxing gibbous","Full moon","Waning gibbous","Last quarter","Waning crescent"];
   const d=Math.min(f%.5,.5-f%.5)*syn; // days from new/full
   return{f,illum:(1-Math.cos(2*Math.PI*f))/2,name:names[Math.round(f*8)%8],spring:d<3.7}}
+/* Hazards show as standard warning signs stacked under the spot name, most serious first.
+   Yellow triangle = warning (ISO 7010 style), red circle-slash = closed or not allowed. Tap one for details. */
+const HZ_TRI=g=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 22.5 21h-21z" fill="#f7c81e" stroke="#16181a" stroke-width="1.7" stroke-linejoin="round"/>'+g+"</svg>";
+const HZ_ICON={
+  warn:HZ_TRI('<path d="M12 9v5.5" stroke="#16181a" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.25" fill="#16181a"/>'),
+  wave:HZ_TRI('<path d="M6.3 17.6c1.2-1.6 2.5-1.6 3.8 0s2.6 1.6 3.8 0 2.6-1.6 3.8 0M9.5 13.2c.9-1.2 1.7-1.2 2.5 0s1.700 1.200 2.500 0" fill="none" stroke="#16181a" stroke-width="1.7" stroke-linecap="round"/>'),
+  wind:HZ_TRI('<path d="M7.500 14.300h6.200a1.700 1.700 0 1 0-1.700-1.700M6.300 17.600h9.200" fill="none" stroke="#16181a" stroke-width="1.7" stroke-linecap="round"/>'),
+  ban:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.300" fill="#fff" stroke="#d2232a" stroke-width="3"/><path d="M5.600 5.600 18.400 18.400" stroke="#d2232a" stroke-width="3"/></svg>'};
+let hazList=[],hazOpen=-1;
+function drawHaz(){
+  const MAXI=4,over=hazList.length>MAXI,shown=over?hazList.slice(0,MAXI-1):hazList;
+  if(hazOpen===99?!over:hazOpen>=shown.length)hazOpen=-1;
+  $("haz").innerHTML=shown.map((a,i)=>'<button type="button" data-hz="'+i+'" aria-expanded="'+(hazOpen===i)+'" aria-label="'+esc(a.title)+'" title="'+esc(a.title)+'">'+HZ_ICON[a.icon]+"</button>").join("")
+    +(over?'<button type="button" class="more" data-hz="99" aria-expanded="'+(hazOpen===99)+'" aria-label="'+(hazList.length-shown.length)+' more warnings">+'+(hazList.length-shown.length)+"</button>":"");
+  const items=hazOpen<0?[]:hazOpen===99?hazList.slice(shown.length):[hazList[hazOpen]],box=$("hazBox");
+  box.hidden=!items.length;
+  box.innerHTML=items.length?'<button class="x" type="button" data-hzclose aria-label="Close">×</button>'+items.map(a=>'<div class="it"><h4 class="t-'+a.lvl+'">'+esc(a.title)+"</h4><div>"+a.html+"</div></div>").join(""):"";
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-hz]");
+  if(b){const i=+b.dataset.hz;hazOpen=hazOpen===i?-1:i;drawHaz();return}
+  if(hazOpen>=0&&(e.target.closest("[data-hzclose]")||!e.target.closest("#hazBox"))){hazOpen=-1;drawHaz()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&hazOpen>=0){hazOpen=-1;drawHaz()}});
 function renderAlerts(site,c){
-  const out=[];
-  if(!c.season.open)out.push(["bad","Season closed","Recreational Dungeness season reopens "+fmtDate(c.season.nextOpen)+". Rock crab is open all year."]);
-  if(c.flags.includes("surf"))out.push(["bad","Dangerous surf","Stay off jetties and wet sand. Never turn your back on the ocean."]);
-  if(c.flags.includes("bigsea"))out.push(["bad","Big seas outside",Math.round(c.wave)+" ft swell on the open coast. Stay off jetty rocks and well back from the water's edge."]);
-  if(c.flags.includes("sneaker"))out.push(["bad","Sneaker wave risk","Long-period swell ("+Math.round(c.s.per)+" s). Waves can surge far up the beach without warning."]);
-  if(c.flags.includes("closed-hours")&&c.season.open)out.push(["fair","After hours","This spot is day-use only. Check gate hours before you drive."]);
-  if(site.advisory)out.push(["bad","Health closure",esc(site.advisory)+' <a target="_blank" rel="noopener" href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason">CDFW in-season page</a>']);
-  $("alerts").innerHTML=out.map(a=>'<div class="alert '+a[0]+'"><div><b>'+esc(a[1])+".</b> <span>"+a[2]+"</span></div></div>").join("")+'<div id="nws"></div>';
-  loadAlerts(site).then(al=>{if(site.id!==current||!$("nws"))return;
-    $("nws").innerHTML=al.map(p=>'<div class="alert '+(/Severe|Extreme/.test(p.severity)||/warning/i.test(p.event)?"bad":"fair")+'" style="margin-top:8px"><div><b>'+esc(p.event)+".</b> <span>"+esc(p.headline||"")+" (National Weather Service)</span></div></div>").join("")});
+  const out=[],add=(lvl,icon,title,html)=>out.push({lvl,icon,title,html});
+  if(!c.season.open)add("bad","ban","Season closed","Recreational Dungeness season reopens "+fmtDate(c.season.nextOpen)+". Rock crab is open all year.");
+  if(site.advisory)add("bad","ban","Health closure",esc(site.advisory)+' <a target="_blank" rel="noopener" href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason">CDFW in-season page</a>');
+  if(c.flags.includes("surf"))add("bad","wave","Dangerous surf","Stay off jetties and wet sand. Never turn your back on the ocean.");
+  if(c.flags.includes("sneaker"))add("bad","wave","Sneaker wave risk","Long-period swell ("+Math.round(c.s.per)+" s). Waves can surge far up the beach without warning.");
+  if(c.flags.includes("bigsea"))add("bad","wave","Big seas outside",Math.round(c.wave)+" ft swell on the open coast. Stay off jetty rocks and well back from the water's edge.");
+  if(c.flags.includes("wind"))add("bad","wind","Very strong wind","Gusting near "+Math.round(nz(c.w.gust,c.w.wind))+" mph. Hard to cast or tend gear safely.");
+  const local=out.slice(),key=site.id+"|"+c.t;renderAlerts.key=key;
+  const show=nws=>{const sev=a=>a.lvl==="bad"?0:1;hazList=local.concat(nws).sort((a,b)=>sev(a)-sev(b));
+    if(c.flags.includes("closed-hours")&&c.season.open)hazList.push({lvl:"fair",icon:"ban",title:"After hours",html:"This spot is day-use only. Check gate hours before you drive."});
+    drawHaz()};
+  show([]);
+  // National Weather Service alerts apply only while they are in effect
+  loadAlerts(site).then(al=>{if(renderAlerts.key!==key)return;const real=c.t-Math.round((pacNow()-Date.now())/6e4)*6e4;
+    show(al.filter(p=>{const end=Date.parse(p.ends||p.expires||"");return isNaN(end)||real<end}).map(p=>({lvl:/Severe|Extreme/.test(p.severity)||/warning/i.test(p.event)?"bad":"fair",
+      icon:/wind|gale|craft|storm/i.test(p.event)?"wind":/surf|beach|rip|sneaker|sea|tsunami|flood|marine/i.test(p.event)?"wave":"warn",title:p.event,html:esc(p.headline||"")+" (National Weather Service)"})))});
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-sel]");if(!b)return;setTime(+b.dataset.sel,{jump:true})});
 function renderWindows(site,now){
