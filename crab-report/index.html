@@ -67,8 +67,6 @@ button,select,input,textarea{font:inherit;color:inherit}
 .mast h1{font-size:1.5rem}
 .mast .sub{font:500 .85rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.8}
 .alert .btn{margin-top:8px;display:flex}
-.alert.slim{align-items:center;justify-content:space-between;padding:6px 8px 6px 14px;font-size:.92rem;gap:12px}
-.alert.slim .btn{margin:0;flex:none;padding:5px 12px}
 
 /* spot picker */
 .picker{display:flex;gap:8px;overflow-x:auto;padding-block:12px;scrollbar-width:none}
@@ -389,7 +387,6 @@ const RULES={lineLat:38.77,size:"5¾ inches",bait:"squid is the snare favorite. 
   ["Rock crab","Red, yellow and brown rock crab: 35 per day, 4 inch minimum, open all year. A nice bonus from the jetties."],
   ["Eating","State health officials advise against eating the guts (crab butter). Clean crabs before cooking, or discard the cooking water."]],
  links:[["CDFW in-season closures","https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason"],["CDFW crab rules","https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs/Crab"],["Whale-safe gear status","https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries"],["Domoic acid advisories","https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram/DomoicAcid.aspx"],["Lawson's Landing report","https://fishlawsons.blogspot.com/"],["Shore snare reports","https://www.fishsniffer.com/durasnare"],["NorCal Fish Reports","https://www.norcalfishreports.com"],["Pier Fishing in California","https://www.pierfishing.com"]]};
-//SITES-END
 
 const STATIONS=[
  {id:"9414131",n:"Pillar Point Harbor",lat:37.5025,lon:-122.4822},{id:"9414275",n:"Ocean Beach",lat:37.775,lon:-122.513},
@@ -400,6 +397,7 @@ const STATIONS=[
  {id:"9418024",n:"Shelter Cove",lat:40.025,lon:-124.058},{id:"9418767",n:"Humboldt Bay North Spit",lat:40.7669,lon:-124.2174},
  {id:"9419750",n:"Crescent City",lat:41.7456,lon:-124.1844}];
 const FALLBACK_STATION="9415020";
+//SITES-END
 
 /* ============================== STORAGE ============================== */
 const store={get(k,d){try{const v=localStorage.getItem("crab."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
@@ -438,67 +436,52 @@ function seasonInfo(site,ms){
 }
 
 /* ============================== DATA LOADING ============================== */
-/* Favorites load first so the report appears fast; the other spots follow in the background.
-   A saved forecast is shown immediately and refreshed behind the scenes. */
-const DATA={tide:{},wx:{},sea:{},alerts:{},loadedAt:0,stale:false,usedOld:false};
-const FRESH_MIN=90;
-try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.")&&!k.startsWith("crab.c.k3.")).forEach(k=>localStorage.removeItem(k))}catch(e){}
-function fetchJSON(url,ms){return new Promise((res,rej)=>{
+/* The built-in spots come from data/forecast.json, which a scheduled job on GitHub refreshes
+   once a day. Phones never call the weather services for those spots, so there are no rate
+   limits to hit. Only spots Rob adds himself are fetched live (and cached for a few hours). */
+const DATA={tide:{},wx:{},sea:{},alerts:{},loadedAt:0,daily:null};
+try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.")&&!k.startsWith("crab.c.k4.")).forEach(k=>localStorage.removeItem(k))}catch(e){}
+function fetchJSON(url,ms,opts){return new Promise((res,rej)=>{
   const ac=typeof AbortController!=="undefined"?new AbortController():null;
   const tm=setTimeout(()=>{if(ac)ac.abort();rej(new Error("timeout"))},ms);
-  fetch(url,ac?{signal:ac.signal}:{}).then(r=>{if(!r.ok){const e=new Error("HTTP "+r.status);e.busy=r.status===429;throw e}return r.json()}).then(d=>{clearTimeout(tm);res(d)},e=>{clearTimeout(tm);rej(e)})})}
-/* mode "fresh": use the cache only if recent. mode "any": use whatever is saved (marks DATA.usedOld). */
-async function getJSON(url,key,sig,mode,what){
-  const c=store.get("c.k3."+key,null),ok=c&&c.sig===sig;
-  if(ok&&Date.now()-c.at<FRESH_MIN*6e4)return c.d;
-  if(ok&&mode==="any"&&Date.now()-c.at<36*H){DATA.usedOld=true;DATA.oldAge=Math.max(DATA.oldAge||0,Date.now()-c.at);return c.d}
-  let err;
-  for(let i=0;i<2;i++){try{const d=await fetchJSON(url,i?15000:9000);store.set("c.k3."+key,{at:Date.now(),sig,d});return d}catch(e){err=e;if(e.busy)break}}
-  if(ok){DATA.stale=Math.max(DATA.stale||0,Date.now()-c.at);DATA.busy=DATA.busy||!!err.busy;return c.d}
-  err.what=what;throw err;
-}
+  fetch(url,Object.assign(ac?{signal:ac.signal}:{},opts||{})).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(d=>{clearTimeout(tm);res(d)},e=>{clearTimeout(tm);rej(e)})})}
 function nearestStation(lat,lon){let b=STATIONS[0],bd=1e9;for(const s of STATIONS){const d=Math.hypot(s.lat-lat,(s.lon-lon)*.78);if(d<bd){bd=d;b=s}}return b.id}
-async function loadTide(st,now,mode){
-  const day=ymd(now-24*H);
-  const u="https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=robs_crab_report&begin_date="+day+"&range=312&datum=MLLW&station="+st+"&time_zone=lst_ldt&units=english&interval=hilo&format=json";
-  // tide predictions don't change, so a copy fetched today is always good
-  const c=store.get("c.k3.tide."+st,null);
-  let j=c&&c.sig===day?c.d:await getJSON(u,"tide."+st,day,mode,"NOAA tides");
-  if(!j.predictions)throw new Error("no tide");
-  DATA.tide[st]=j.predictions.map(p=>({t:parseT(p.t),v:+p.v,hi:p.type==="H"}));
-}
 const hasData=s=>!!(DATA.wx[s.id]&&DATA.sea[s.id]);
-async function loadSites(sites,key,mode){
-  if(!sites.length)return;
-  const now=pacNow();
-  sites.forEach(s=>{s.station=s.station||nearestStation(s.lat,s.lon)});
-  const sig=sites.map(s=>s.id+"@"+s.lat+","+s.lon).join("|");
-  const lat=sites.map(s=>s.lat).join(","),lon=sites.map(s=>s.lon).join(",");
-  const slat=sites.map(s=>(s.sea||s).lat).join(","),slon=sites.map(s=>(s.sea||s).lon).join(",");
-  const tz="&timezone=America%2FLos_Angeles";
-  const wxU="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+"&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,precipitation_probability,weather_code,cloud_cover&daily=sunrise,sunset&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch&forecast_days=11&past_days=3"+tz;
-  const seaU="https://marine-api.open-meteo.com/v1/marine?latitude="+slat+"&longitude="+slon+"&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,sea_surface_temperature&length_unit=imperial&forecast_days=11&past_days=1"+tz;
-  const stations=[...new Set(sites.map(s=>s.station))];
-  let tideErr=null;
-  const [wx,sea]=await Promise.all([
-    getJSON(wxU,"wx."+key,sig,mode,"the weather forecast"),getJSON(seaU,"sea."+key,sig,mode,"the swell forecast"),
-    ...stations.map(st=>loadTide(st,now,mode).catch(e=>{tideErr=e}))]);
-  if(stations.some(st=>!DATA.tide[st])){
-    await loadTide(FALLBACK_STATION,now,mode).catch(()=>{});
-    if(!DATA.tide[FALLBACK_STATION]){const e=tideErr||new Error("tides");e.what="NOAA tides";throw e}
-  }
+function ingest(sites,wx,sea){
   const arr=x=>Array.isArray(x)?x:[x];
   arr(wx).forEach((w,i)=>{const s=sites[i];if(!s||!w.hourly)return;const m=new Map(),h=w.hourly;
     h.time.forEach((t,k)=>m.set(t,{temp:h.temperature_2m[k],wind:h.wind_speed_10m[k],gust:h.wind_gusts_10m[k],wdir:h.wind_direction_10m[k],rain:h.precipitation[k]||0,pop:h.precipitation_probability[k],code:h.weather_code[k],cloud:h.cloud_cover[k]}));
     DATA.wx[s.id]={h:m,sun:w.daily.time.map((d,k)=>({day:parseT(d),rise:parseT(w.daily.sunrise[k]),set:parseT(w.daily.sunset[k])}))}});
   arr(sea).forEach((w,i)=>{const s=sites[i];if(!s||!w.hourly)return;const m=new Map(),h=w.hourly,c=(w.hourly_units||{}).sea_surface_temperature!=="°F";
-    h.time.forEach((t,k)=>m.set(t,{wave:h.wave_height[k],per:h.wave_period[k],dir:h.wave_direction[k],swell:h.swell_wave_height[k],sper:h.swell_wave_period[k],sst:h.sea_surface_temperature[k]==null?null:(c?h.sea_surface_temperature[k]*9/5+32:h.sea_surface_temperature[k])}));
+    h.time.forEach((t,k)=>m.set(t,{wave:h.wave_height[k],per:h.wave_period[k],dir:h.wave_direction[k],sst:h.sea_surface_temperature[k]==null?null:(c?h.sea_surface_temperature[k]*9/5+32:h.sea_surface_temperature[k])}));
     DATA.sea[s.id]=m});
 }
-const firstSites=()=>{const l=allSites().filter(s=>favs.has(s.id));return l.length?l:[siteById(current)||SITES[0]]};
+/* the daily file; a copy is kept on the phone so the app still opens with no signal */
+async function loadDaily(){
+  let j=null;
+  try{j=await fetchJSON("data/forecast.json",20000,{cache:"no-cache"});store.set("daily",j)}
+  catch(e){j=store.get("daily",null);if(!j)throw e}
+  SITES.forEach(s=>{s.station=s.station||nearestStation(s.lat,s.lon)});
+  ingest(j.sites.map(id=>siteById(id)),j.wx,j.sea);
+  Object.keys(j.tides).forEach(st=>{DATA.tide[st]=j.tides[st].map(p=>({t:parseT(p[0]),v:p[1],hi:p[2]==="H"}))});
+  DATA.daily=j.generated;
+}
+/* spots Rob adds himself: fetched live, cached for 3 hours */
+async function loadCustom(sites){
+  if(!sites.length)return;
+  sites.forEach(s=>{s.station=s.station||nearestStation(s.lat,s.lon)});
+  const key="c.k4."+sites.map(s=>s.id+"@"+s.lat+","+s.lon).join("|"),c=store.get(key,null);
+  if(c&&Date.now()-c.at<3*H){ingest(sites,c.wx,c.sea);return}
+  const lat=sites.map(s=>s.lat).join(","),lon=sites.map(s=>s.lon).join(","),tz="&timezone=America%2FLos_Angeles";
+  try{const [wx,sea]=await Promise.all([
+      fetchJSON("https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+"&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,precipitation_probability,weather_code,cloud_cover&daily=sunrise,sunset&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch&forecast_days=11&past_days=3"+tz,15000),
+      fetchJSON("https://marine-api.open-meteo.com/v1/marine?latitude="+lat+"&longitude="+lon+"&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&length_unit=imperial&forecast_days=11&past_days=1"+tz,15000)]);
+    store.set(key,{at:Date.now(),wx,sea});ingest(sites,wx,sea)}
+  catch(e){if(c){ingest(sites,c.wx,c.sea);return}throw e}
+}
 async function loadAlerts(site){
   if(DATA.alerts[site.id])return DATA.alerts[site.id];
-  try{const j=await getJSON("https://api.weather.gov/alerts/active?point="+site.lat.toFixed(3)+","+site.lon.toFixed(3),"al."+site.id,"1","fresh","alerts");
+  try{const j=await fetchJSON("https://api.weather.gov/alerts/active?point="+site.lat.toFixed(3)+","+site.lon.toFixed(3),12000);
     DATA.alerts[site.id]=(j.features||[]).map(f=>f.properties).filter(p=>/surf|beach|wind|gale|craft|storm|tsunami|flood|rip|sneaker|sea|marine|fog/i.test(p.event))}
   catch(e){DATA.alerts[site.id]=[]}
   return DATA.alerts[site.id];
@@ -629,7 +612,7 @@ function gaugeSVG(sc,g){
 function renderToday(){
   const site=siteById(current);if(!site||!DATA.loadedAt)return;
   if(!hasData(site)){$("today").hidden=true;setStatus("fair","<span>Hauling in the forecast for "+esc(site.name)+"…</span>");
-    (DATA.restP||(store.get("c.k3.wx.rest",null)?ensureRest():Promise.resolve())).then(()=>hasData(site)?null:loadSites([site],"one."+site.id,"any")).then(()=>{if(current===site.id&&hasData(site))renderToday()},e=>{if(current===site.id)setStatus("bad","<b>No signal.</b> <span>Couldn't reach "+(e.what||"the forecast services")+".</span>",true)});return}
+    loadCustom([site]).then(()=>{if(current===site.id&&hasData(site))renderToday()},()=>{if(current===site.id)setStatus("bad","<b>No signal.</b> <span>Couldn't load the forecast for "+esc(site.name)+".</span>",true)});return}
   const now=pacNow(),base=Math.floor(now/H)*H,mx=maxAhead(site,base);
   if(selT!=null&&selT<=base)selT=null;if(selT!=null&&selT>base+mx*H)selT=base+mx*H;
   const t=selT==null?now:selT,c=cond(site,t),g=grade(c.score),lbl=whenLabel(t,now);
@@ -642,7 +625,7 @@ function renderToday(){
   $("ticks").innerHTML=tk;
   $("viewing").hidden=selT==null;$("viewTxt").textContent=lbl;$("viewSmall").textContent=selT!=null&&selT-base>5*864e5?"Viewing · rough forecast":"Viewing forecast for";
   $("gearWhen").textContent=selT==null?"":"· "+lbl;
-  if(!DATA.stale)$("status").hidden=true;$("today").hidden=false;
+  $("status").hidden=true;$("today").hidden=false;
   $("sceneWhere").textContent=site.name;
   $("sceneWhen").textContent=selT==null?"Now · "+fmtTime(now):lbl;
   $("gauge").innerHTML=gaugeSVG(c.score,g);$("gauge").setAttribute("aria-label","Crabbing score "+c.score+" out of 100");
@@ -755,7 +738,7 @@ $("backNow").addEventListener("click",()=>setTime(null));
 /* ============================== RENDER: SPOTS ============================== */
 function renderSpots(){
   const el=$("tab-spots"),now=pacNow(),ready=!!DATA.loadedAt;
-  const missing=ready&&allSites().some(s=>!hasData(s));if(missing&&!DATA.restErr)ensureRest();
+  const missing=ready?custom.filter(s=>!hasData(s)):[];if(missing.length)loadCustom(missing).then(()=>{if(!$("tab-spots").hidden)renderSpots()},()=>{});
   const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w,ok}});
   rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||((b.w?b.w.score:b.c?b.c.score:0)-(a.w?a.w.score:a.c?a.c.score:0)));
   const bet=ready?rows.filter(r=>!favs.has(r.s.id)&&r.w&&!r.s.custom&&!r.s.advisory).sort((a,b)=>b.w.score-a.w.score)[0]:null;
@@ -763,7 +746,6 @@ function renderSpots(){
   let h="";
   if(bet&&bet.w.score>=55)h+='<div class="bet"><div class="lbl" style="color:inherit">Somewhere new to try</div><h2>'+esc(bet.s.name)+"</h2><p>Scores "+bet.w.score+" "+dayLong(bet.w.t,now)+" around "+fmtTime(bet.w.t)+(bet.w.score>favBest+4?", better than your favorites ("+favBest+")":"")+". "+esc(bet.s.blurb||"")+'</p><button class="btn" type="button" data-go="'+bet.s.id+'" data-at="'+bet.w.t+'">See the full report</button></div>';
   h+='<p class="fine">Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm. Tap a name for the full report.</p>';
-  if(missing)h+=DATA.restErr?'<div class="alert fair"><div><b>Some spots didn\'t load.</b> <span>'+(DATA.restErr.busy?"The forecast service is busy. Give it a minute.":"Couldn't reach "+(DATA.restErr.what||"the forecast services")+".")+'</span><button class="btn small" type="button" data-retry-rest>Try again</button></div></div>':'<div class="alert fair"><span>Hauling in the other spots…</span></div>';
   h+=rows.map(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
     return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?dayShort(w.t,now)+" "+fmtTime(w.t).replace(" ","").toUpperCase():"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'">'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
       (w?'<p class="blurb"><b>Best time: '+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</b>"+(c?" · right now "+c.score:"")+"</p>":ok?'<p class="blurb"><b>No good window in the next 36 hours</b>'+(c?" · right now "+c.score:"")+"</p>":"")+
@@ -817,7 +799,7 @@ function renderRules(){
   $("tab-rules").innerHTML='<div class="alert '+(s.open?"good":"bad")+'"><div><b>'+(s.open?"Season open":"Season closed")+".</b> <span>"+(s.open?"Recreational Dungeness is open through "+s.closes+" south of the Mendocino county line (July 30 north of it).":"Reopens "+fmtDate(s.nextOpen)+".")+"</span></div></div>"+
   '<div class="card rules"><h2>The rules, short version</h2><dl>'+RULES.items.map(r=>"<dt>"+r[0]+"</dt><dd>"+r[1]+"</dd>").join("")+'</dl><p class="fine" style="margin-top:14px">'+RULES.asOf+"</p></div>"+
   '<div class="card"><h2>Check before you go</h2><div class="btns">'+RULES.links.map(l=>'<a class="btn" target="_blank" rel="noopener" href="'+l[1]+'">'+esc(l[0])+"</a>").join("")+"</div>"+(RULES.hotline?'<p class="fine" style="margin-top:10px">'+RULES.hotline+"</p>":"")+"</div>"+
-  '<div class="card"><h2>How the score works</h2><p>Each hour gets a score out of 100 for shore crabbing at that spot.</p><ul class="tips"><li><b>Tide and current (42%)</b>. Crabs feed and gear stays put around slack water. High slack and the last of the incoming score best. Big tide swings and very low water score worst.</li><li><b>Swell (28%)</b>. Ocean swell scaled to how exposed the spot is. Over about 8 ft at the water\'s edge the score is capped as unsafe.</li><li><b>Hours</b>. Suggested windows run 5 am to 10 pm, and daylight only at day-use parks.</li><li><b>Wind (20%)</b>. Sustained wind blended with gusts.</li><li><b>Light (10%)</b>. Dungeness move shallower at dusk and after dark.</li><li><b>Rain runoff</b>. Heavy rain in the last three days takes points off bay and river-mouth spots.</li></ul><p class="fine" style="margin-top:10px">Tides: NOAA predictions. Swell, wind, weather and water temperature: Open-Meteo forecast models. Hazard alerts: National Weather Service. Forecasts are guidance. Look at the water yourself before you set up.</p></div>';
+  '<div class="card"><h2>How the score works</h2><p>Each hour gets a score out of 100 for shore crabbing at that spot.</p><ul class="tips"><li><b>Tide and current (42%)</b>. Crabs feed and gear stays put around slack water. High slack and the last of the incoming score best. Big tide swings and very low water score worst.</li><li><b>Swell (28%)</b>. Ocean swell scaled to how exposed the spot is. Over about 8 ft at the water\'s edge the score is capped as unsafe.</li><li><b>Hours</b>. Suggested windows run 5 am to 10 pm, and daylight only at day-use parks.</li><li><b>Wind (20%)</b>. Sustained wind blended with gusts.</li><li><b>Light (10%)</b>. Dungeness move shallower at dusk and after dark.</li><li><b>Rain runoff</b>. Heavy rain in the last three days takes points off bay and river-mouth spots.</li></ul><p class="fine" style="margin-top:10px">Tides: NOAA predictions. Swell, wind, weather and water temperature: Open-Meteo forecast models. Hazard alerts: National Weather Service. The forecast is refreshed once a day, early each morning. Forecasts are guidance. Look at the water yourself before you set up.</p></div>';
 }
 
 /* ============================== SCENE ANIMATION ============================== */
@@ -991,50 +973,26 @@ document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 let animStarted=false;
 let bootRun=0;
-function ago(ms){const m=Math.round(ms/6e4);if(m<1)return"just now";if(m<60)return m+(m===1?" minute ago":" minutes ago");const h=Math.round(m/60);if(h<48)return h+(h===1?" hour ago":" hours ago");const d=Math.round(h/24);return d+" days ago"}
-function staleBar(age){$("status").hidden=false;$("status").className="alert fair slim";$("status").innerHTML='<span>Forecast last updated '+ago(age)+(DATA.busy?' · weather service is busy':'')+'</span><button class="btn small" type="button" data-retry>Update</button>'}
 function setStatus(cls,html,retry){$("status").hidden=false;$("status").className="alert "+cls;$("status").innerHTML="<div>"+html+(retry?'<button class="btn small" type="button" data-retry>Try again</button>':"")+"</div>"}
 function paint(){$("mastSub").textContent=fmtDate(pacNow())+" · Shore crabbing forecast";renderToday();if(!$("tab-spots").hidden)renderSpots();
   if(!animStarted){animStarted=true;requestAnimationFrame(drawScene)}else if(reduce)drawScene(0)}
-/* The other spots are only fetched when they're wanted (the Spots tab), which keeps
-   everyday loads small and well inside the free forecast service's request limits. */
-function ensureRest(){
-  if(DATA.restP||!DATA.loadedAt)return DATA.restP||Promise.resolve();
-  const run=bootRun,first=firstSites(),rest=allSites().filter(s=>!first.includes(s));
-  if(!rest.length)return DATA.restP=Promise.resolve();
-  const show=()=>{if(run===bootRun&&!$("tab-spots").hidden)renderSpots()};
-  return DATA.restP=loadSites(rest,"rest","any").then(()=>{show();
-    if(DATA.usedOld){DATA.usedOld=false;return loadSites(rest,"rest","fresh").then(show,()=>{})}},
-    e=>{if(run===bootRun){DATA.restP=null;DATA.restErr=e;show()}});
-}
-async function boot(force){
-  const run=++bootRun,first=firstSites(),rest=allSites().filter(s=>!first.includes(s));
-  if(force){try{Object.keys(localStorage).filter(k=>k.startsWith("crab.c.k3.")).forEach(k=>localStorage.removeItem(k))}catch(e){}DATA.alerts={}}
-  DATA.stale=false;DATA.usedOld=false;DATA.restErr=null;DATA.oldAge=0;DATA.busy=false;
-  const slow=setTimeout(()=>{if(run===bootRun&&!DATA.loadedAt)setStatus("fair","<b>Still hauling.</b> <span>The tide and weather services are slow to answer. Hang on a few seconds.</span>")},5000);
-  try{
-    await loadSites(first,"fav","any");if(run!==bootRun)return;
-    DATA.loadedAt=pacNow();
-    DATA.restP=null;if(!$("tab-spots").hidden)ensureRest();
-    paint();
-    if(DATA.usedOld){DATA.usedOld=false;await loadSites(first,"fav","fresh");if(run!==bootRun)return;DATA.loadedAt=pacNow();paint()}
-    if(DATA.stale)staleBar(DATA.stale);
-  }catch(e){
-    if(run!==bootRun)return;
-    if(DATA.loadedAt){DATA.busy=DATA.busy||!!e.busy;DATA.stale=DATA.stale||DATA.oldAge||1;staleBar(DATA.oldAge||DATA.stale)}
-    else{$("today").hidden=true;setStatus("bad",e.busy?"<b>Forecast service is busy.</b> <span>It's limiting requests right now. Give it a minute.</span>":"<b>No signal.</b> <span>Couldn't reach "+(e.what||"the tide and weather services")+". Check your connection.</span>",true)}
-  }finally{clearTimeout(slow)}
+async function boot(){
+  const run=++bootRun;
+  try{await loadDaily()}
+  catch(e){if(run===bootRun&&!DATA.loadedAt){$("today").hidden=true;setStatus("bad","<b>No signal.</b> <span>Couldn't load the forecast. Check your connection.</span>",true)}return false}
+  if(run!==bootRun)return true;
+  DATA.loadedAt=pacNow();paint();return true;
 }
 $("compass").addEventListener("click",()=>{const b=$("compass");if(b.classList.contains("spin"))return;b.classList.add("spin");
-  const t0=Date.now();boot(true).then(()=>{setTimeout(()=>{b.classList.remove("spin");toast($("status").hidden?"Forecast updated":"Couldn't update right now")},Math.max(0,700-(Date.now()-t0)))})});
-document.addEventListener("click",e=>{if(e.target.closest("[data-retry-rest]")){DATA.restErr=null;renderSpots();return}const rb=e.target.closest("[data-retry]");if(rb){if(rb.closest(".slim")){rb.disabled=true;rb.textContent="Updating…"}else setStatus("fair","<span>Trying again…</span>");boot(false)}});
+  const t0=Date.now();boot().then(ok=>{setTimeout(()=>{b.classList.remove("spin");toast(ok?"Forecast reloaded":"Couldn't reach the forecast right now")},Math.max(0,700-(Date.now()-t0)))})});
+document.addEventListener("click",e=>{if(e.target.closest("[data-retry]")){setStatus("fair","<span>Trying again…</span>");boot()}});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
-renderPicker();fillSpotSelect();setWhenNow();renderLog();boot(false);
+renderPicker();fillSpotSelect();setWhenNow();renderLog();boot();
 setInterval(()=>{if(!document.hidden&&DATA.loadedAt&&$("tab-today").hidden===false)renderToday()},5*6e4);
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(document.hidden){hiddenAt=Date.now();return}
   if(selT!=null&&hiddenAt&&Date.now()-hiddenAt>30*6e4){selT=null;if(DATA.loadedAt)renderToday()}
-  if(DATA.loadedAt&&pacNow()-DATA.loadedAt>FRESH_MIN*6e4)boot(false)});
+  if(DATA.loadedAt&&pacNow()-DATA.loadedAt>6*H)boot()});
 </script>
 </body>
 </html>
