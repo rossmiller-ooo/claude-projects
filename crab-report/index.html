@@ -77,7 +77,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 .opts .chip.mid{background:var(--line)}
 .opts .chip small{font-weight:500;opacity:.75;margin-left:4px}
 .find-go{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.find-go .btn.primary{padding:12px 22px;font-size:1.05rem}
+.find-go .btn.primary{padding:12px 24px;font-size:1.05rem}
 .win .spotname{font:600 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase;color:var(--ink2)}
 .chip{flex:none;border:1.5px solid var(--ink);background:var(--card);border-radius:999px;padding:9px 15px;font-weight:600;cursor:pointer;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--card)}
@@ -107,7 +107,7 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .hazbox .x{all:unset;cursor:pointer;float:right;margin:-4px -4px 0 8px;padding:4px 8px;font-size:1.2rem;line-height:1;color:var(--ink2)}
 @media (max-width:480px){.haz button{width:30px;height:30px}.haz button svg{width:24px;height:24px}.haz{gap:4px}.hazbox{left:48px}}
 .scrub{display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:start;margin-top:8px}
-.scrub .step{border:1.5px solid var(--ink);background:var(--card);border-radius:8px;height:55px;font:700 1.2rem/1 var(--f-data);cursor:pointer;color:var(--ink)}
+.scrub .step{border:1.5px solid var(--ink);background:var(--card);border-radius:999px;height:55px;font:700 1.2rem/1 var(--f-data);cursor:pointer;color:var(--ink)}
 .scrub .step:disabled{opacity:.35;cursor:default}
 .tl{position:relative;min-width:0;border:1.5px solid var(--line);border-radius:8px;background:var(--card);overflow:hidden}
 .tl-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;cursor:grab;outline:none}
@@ -120,7 +120,7 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .tl:has(.tl-scroll:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
 .viewing{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;padding:7px 8px 7px 14px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .viewing small{display:block;font:600 .72rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
-.viewing .btn{flex:none;padding:6px 12px;background:var(--ink);color:var(--card);border-color:var(--ink)}
+.viewing .btn{flex:none;padding:6px 14px;background:var(--ink);color:var(--card);border-color:var(--ink)}
 .viewing.atnow .btn{visibility:hidden}
 .viewing.flash{animation:flash .9s ease-out}
 @keyframes flash{0%{transform:scale(1.03);box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 30%,transparent)}100%{transform:none}}
@@ -191,9 +191,9 @@ button.day{font:inherit;color:inherit;background:none;cursor:pointer}
 .gear h3{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
-.btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink);background:var(--card);color:var(--ink);border-radius:8px;padding:10px 14px;font-weight:600;text-decoration:none;cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--ink);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 16px;font-weight:600;text-decoration:none;cursor:pointer}
 .btn.primary{background:var(--ink);border-color:var(--ink);color:var(--card)}
-.btn.small{padding:6px 10px;font-size:.9rem}
+.btn.small{padding:6px 14px;font-size:.9rem}
 
 /* spots */
 .spot{display:grid;grid-template-columns:62px 1fr auto;gap:12px;align-items:start}
@@ -210,7 +210,7 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .linkbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mapprev{position:relative;height:clamp(200px,36vw,260px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--water);isolation:isolate}
 .mapprev #prevMap{position:absolute;inset:0;pointer-events:none;z-index:0}
-.mapprev-lbl{position:absolute;left:10px;bottom:10px;z-index:1;background:var(--deep);color:var(--deep-ink);border-radius:8px;padding:8px 14px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.mapprev-lbl{position:absolute;left:10px;bottom:10px;z-index:1;background:var(--deep);color:var(--deep-ink);border-radius:999px;padding:8px 14px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .mapprev:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mapprev .leaflet-control-attribution{font-size:9px}
 #spotsMap{height:min(68vh,560px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--water);z-index:0}
@@ -297,9 +297,10 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
   </section>
 
   <section id="tab-spots" hidden>
+    <div class="opts" id="mapMode" role="group" aria-label="Scores to show" style="margin:0"><button class="chip" type="button" data-m="best" aria-pressed="true">Best in next 36 hrs</button><button class="chip" type="button" data-m="now" aria-pressed="false">Right now</button></div>
     <div class="mapprev" id="mapPrev" role="button" tabindex="0" aria-label="Open the map view"><div id="prevMap"></div><span class="mapprev-lbl">Map view <span aria-hidden="true">›</span></span></div>
-    <div id="mapBar" hidden style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="linkbtn" type="button" id="mapToggle">List view</button><button class="btn small" type="button" id="mapZoom">Whole coast</button></div>
-    <div id="spotsMapBox" hidden><div class="opts" id="mapMode" role="group" aria-label="Scores to show" style="margin:0 0 10px"><button class="chip" type="button" data-m="best" aria-pressed="true">Best in next 36 hrs</button><button class="chip" type="button" data-m="now" aria-pressed="false">Right now</button></div><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" id="mapNote" style="margin-top:6px"></p></div>
+    <div id="mapBar" hidden style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn small" type="button" id="mapToggle">List view</button><button class="btn small" type="button" id="mapZoom">Whole coast</button></div>
+    <div id="spotsMapBox" hidden><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" id="mapNote" style="margin-top:6px"></p></div>
     <div id="spotsList" style="display:flex;flex-direction:column;gap:16px"></div>
   </section>
 
@@ -641,7 +642,7 @@ let curTab="today";
 function renderPicker(){
   const sites=allSites(),favList=sites.filter(s=>favs.has(s.id));
   const list=favList.slice();const cur=siteById(current);if(cur&&!favs.has(cur.id))list.push(cur);
-  $("picker").innerHTML=list.map(s=>'<button class="chip" type="button" data-id="'+s.id+'" aria-pressed="'+(curTab==="today"&&s.id===current)+'">'+(favs.has(s.id)?'<span class="st">★</span>':"")+esc(s.short||s.name)+"</button>").join("")+'<button class="chip more" type="button" data-id="" aria-pressed="'+(curTab==="spots")+'">More spots…</button>';
+  $("picker").innerHTML=list.map(s=>'<button class="chip" type="button" data-id="'+s.id+'" aria-pressed="'+(curTab==="today"&&s.id===current)+'">'+(favs.has(s.id)?'<span class="st">★</span>':"")+esc(s.short||s.name)+"</button>").join("")+'<button class="chip more" type="button" data-id="">More spots…</button>';
 }
 $("picker").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(!b.dataset.id){showTab("spots");return}selectSite(b.dataset.id)});
 function selectSite(id,t){current=id;store.set("current",id);if(t!==undefined)selT=t;renderPicker();showTab("today");renderToday()}
@@ -845,7 +846,7 @@ async function drawPrev(){
   if(!prev){prev=L.map("prevMap",{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,zoomSnap:.25});
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"&copy; OpenStreetMap"}).addTo(prev);prev.attributionControl.setPrefix(false);prevLayer=L.layerGroup().addTo(prev)}
   prev.invalidateSize();prev.fitBounds([[38.222,-123.075],[38.335,-122.945]],{paddingTopLeft:[10,46],paddingBottomRight:[10,6]});
-  prevLayer.clearLayers();const now=pacNow();spotRows.filter(r=>r.s.id==="lawsons"||r.s.id==="doran").forEach(r=>spotMarker(r,"best",now,false).addTo(prevLayer));
+  prevLayer.clearLayers();const now=pacNow();spotRows.filter(r=>r.s.id==="lawsons"||r.s.id==="doran").forEach(r=>spotMarker(r,mapMode,now,false).addTo(prevLayer));
 }
 function drawMap(){
   $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 36 hours.")+" Tap one for details. Zoom in to see every spot's name.";
@@ -864,7 +865,7 @@ async function showMap(on){
 }
 $("mapToggle").addEventListener("click",()=>showMap(false));
 $("mapPrev").addEventListener("click",()=>showMap(true));$("mapPrev").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showMap(true)}});
-$("mapMode").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;mapMode=b.dataset.m;$("mapMode").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));drawMap()});
+$("mapMode").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;mapMode=b.dataset.m;$("mapMode").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderSpots()});
 $("mapZoom").addEventListener("click",()=>{mapWide=!mapWide;$("mapZoom").textContent=mapWide?"Near favorites":"Whole coast";if(map)map.fitBounds(mapBounds(),{maxZoom:13})});
 
 /* ============================== RENDER: SPOTS ============================== */
@@ -872,13 +873,14 @@ function renderSpots(){
   const el=$("spotsList"),now=pacNow(),ready=!!DATA.loadedAt;
   const missing=ready?custom.filter(s=>!hasData(s)):[];if(missing.length)loadCustom(missing).then(()=>{if(!$("tab-spots").hidden)renderSpots()},()=>{});
   const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w,ok}});
-  rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||((b.w?b.w.score:b.c?b.c.score:0)-(a.w?a.w.score:a.c?a.c.score:0)));
+  const nowMode=mapMode==="now",val=r=>nowMode?(r.c?r.c.score:0):(r.w?r.w.score:r.c?r.c.score:0);
+  rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||(val(b)-val(a)));
   spotRows=rows;if(mapOn)drawMap();else drawPrev();
   let h="";
-  h+='<p class="fine">Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm. Tap a name for the full report.</p>';
-  h+=rows.map(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
-    return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?dayShort(w.t,now)+" "+fmtTime(w.t).replace(" ","").toUpperCase():"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'">'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
-      (w?'<p class="blurb"><b>Best time: '+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</b>"+(c?" · right now "+c.score:"")+"</p>":ok?'<p class="blurb"><b>No good window in the next 36 hours</b>'+(c?" · right now "+c.score:"")+"</p>":"")+
+  h+='<p class="fine">'+(nowMode?"Each score is for that spot right now.":"Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm.")+" Tap a name for the full report.</p>";
+  h+=rows.map(({s,c,w:wBest,ok})=>{const w=nowMode?null:wBest,sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
+    return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?dayShort(w.t,now)+" "+fmtTime(w.t).replace(" ","").toUpperCase():"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+'>'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
+      (w?'<p class="blurb"><b>Best time: '+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</b>"+(c?" · right now "+c.score:"")+"</p>":nowMode&&c?'<p class="blurb"><b>Right now: '+grade(c.score).w+"</b>"+(wBest?" · best in 36 hrs "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</p>":ok?'<p class="blurb"><b>No good window in the next 36 hours</b>'+(c?" · right now "+c.score:"")+"</p>":"")+
       (s.blurb?'<p class="blurb" style="margin-top:4px">'+esc(s.blurb)+"</p>":"")+
       (s.buzz?'<p class="fine" style="margin-top:4px">'+esc(s.buzz)+"</p>":"")+(s.advisory?'<p class="fine t-bad" style="margin-top:4px;font-weight:600">'+esc(s.advisory)+"</p>":"")+
       '<div class="btns">'+mapLinks(s,true)+(s.custom?'<button class="btn small" type="button" data-rmspot="'+s.id+'">Remove</button>':"")+"</div></div>"+starBtn(s)+"</div>"}).join("");
@@ -1132,7 +1134,7 @@ function drawCrab(x,y,ph,hiding,day){
 /* ============================== TABS / BOOT ============================== */
 function showTab(name){["today","spots","find","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
-  curTab=name;$("picker").hidden=name!=="today"&&name!=="spots";renderPicker();
+  curTab=name;$("picker").hidden=name!=="today";renderPicker();
   if(name==="spots"){renderSpots();if(mapOn&&map)setTimeout(()=>map.invalidateSize(),0)}if(name==="find")syncFind();if(name==="rules")renderRules()}
 document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){showTab(b.dataset.tab);window.scrollTo(0,0)}});
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
