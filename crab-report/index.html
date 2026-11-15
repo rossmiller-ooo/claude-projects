@@ -87,13 +87,17 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .scene canvas{display:block;width:100%;aspect-ratio:16/9;max-height:400px}
 .scene .where{position:absolute;left:12px;top:10px;font:italic 500 1.05rem var(--f-display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
 .scrub{display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:start;margin-top:8px}
-.scrub .track{min-width:0}
-.scrub input{width:100%;accent-color:var(--magenta);height:32px;margin:0;display:block}
-.scrub .step{border:1.5px solid var(--ink);background:var(--card);border-radius:8px;height:34px;font:700 1.2rem/1 var(--f-data);cursor:pointer;color:var(--ink)}
+.scrub .step{border:1.5px solid var(--ink);background:var(--card);border-radius:8px;height:55px;font:700 1.2rem/1 var(--f-data);cursor:pointer;color:var(--ink)}
 .scrub .step:disabled{opacity:.35;cursor:default}
-.ticks{position:relative;height:16px;margin:0 8px}
-.ticks span{position:absolute;transform:translateX(-50%);font:600 .68rem var(--f-data);letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);white-space:nowrap}
-.ticks i{position:absolute;top:-4px;width:1px;height:12px;background:var(--line)}
+.tl{position:relative;min-width:0;border:1.5px solid var(--line);border-radius:8px;background:var(--card);overflow:hidden}
+.tl-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;cursor:grab;outline:none}
+.tl-scroll::-webkit-scrollbar{display:none}
+.tl-scroll.drag{cursor:grabbing}
+.tl-scroll svg{display:block;height:52px}
+.tl-scroll svg text{font:600 11px var(--f-data);letter-spacing:.04em;fill:var(--ink2);text-transform:uppercase}
+.tl-needle{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--magenta);pointer-events:none}
+.tl-needle::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:var(--magenta);border-bottom:0}
+.tl:has(.tl-scroll:focus-visible){outline:3px solid var(--magenta);outline-offset:2px}
 .viewing{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--magenta);color:var(--card);border-radius:10px;padding:7px 8px 7px 14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .viewing small{display:block;font:600 .72rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
 .viewing .btn{flex:none;padding:6px 12px;background:var(--card);color:var(--ink);border-color:var(--card)}
@@ -237,7 +241,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
         </div>
         <div class="scrub">
           <button type="button" class="step" id="stepBack" aria-label="One hour earlier">‹</button>
-          <div class="track"><input type="range" id="scrub" min="0" max="72" value="0" step="1" aria-label="Forecast time, hours from now"><div class="ticks" id="ticks" aria-hidden="true"></div></div>
+          <div class="tl"><div class="tl-scroll" id="tl" tabindex="0" role="slider" aria-label="Forecast time. Drag sideways to move through the next ten days" aria-valuemin="0" aria-valuenow="0"><svg id="tlSvg" aria-hidden="true"></svg></div><div class="tl-needle" aria-hidden="true"></div></div>
           <button type="button" class="step" id="stepFwd" aria-label="One hour later">›</button>
         </div>
       </div>
@@ -617,12 +621,10 @@ function renderToday(){
   if(selT!=null&&selT<=base)selT=null;if(selT!=null&&selT>base+mx*H)selT=base+mx*H;
   const t=selT==null?now:selT,c=cond(site,t),g=grade(c.score),lbl=whenLabel(t,now);
   // time controls
-  const sl=$("scrub");sl.max=mx;sl.value=selT==null?0:Math.round((selT-base)/H);$("stepBack").disabled=selT==null;$("stepFwd").disabled=+sl.value>=mx;
-  // day labels sit at noon of each day, tick marks at midnight; single letters when space is tight
-  const tw=$("ticks").clientWidth||300,perDay=tw/(mx/24),one=perDay<34;let tk="";
-  for(let d=Math.floor(base/864e5)*864e5;d<base+mx*H;d+=864e5){const m=(d-base)/(mx*H),n=(d+12*H-base)/(mx*H);
-    if(m>0&&m<1)tk+='<i style="left:'+(m*100).toFixed(2)+'%"></i>';if(n>.02&&n<.98)tk+='<span style="left:'+(n*100).toFixed(2)+'%">'+(one?DOW[new Date(d).getUTCDay()][0]:DOW[new Date(d).getUTCDay()])+"</span>"}
-  $("ticks").innerHTML=tk;
+  $("today").hidden=false;   // the timeline needs its real width
+  const k=selT==null?0:Math.round((selT-base)/H);$("stepBack").disabled=selT==null;$("stepFwd").disabled=k>=mx;
+  buildTimeline(site,base,mx);const tl=$("tl");tl.setAttribute("aria-valuemax",mx);tl.setAttribute("aria-valuenow",k);tl.setAttribute("aria-valuetext",selT==null?"Right now":lbl);
+  if(!tlFromScroll&&Math.abs(tl.scrollLeft-k*tlPx)>tlPx/2)tl.scrollLeft=k*tlPx;
   $("viewing").hidden=false;$("viewing").classList.toggle("atnow",selT==null);$("viewTxt").textContent=selT==null?"Right now, "+fmtTime(now):lbl;
   $("viewSmall").textContent=selT==null?"Viewing forecast for":selT-base>5*864e5?"Viewing · rough forecast":"Viewing forecast for";$("backNow").tabIndex=selT==null?-1:0;
   $("gearWhen").textContent=selT==null?"":"· "+lbl;
@@ -730,8 +732,32 @@ document.addEventListener("click",e=>{
   const go=e.target.closest("[data-go]");if(go){selectSite(go.dataset.go,go.dataset.at?Math.floor(+go.dataset.at/H)*H:undefined);window.scrollTo(0,0);return}
   const rm=e.target.closest("[data-rmspot]");if(rm){custom=custom.filter(s=>s.id!==rm.dataset.rmspot);store.set("custom",custom);favs.delete(rm.dataset.rmspot);store.set("favs",[...favs]);if(current===rm.dataset.rmspot)current=SITES[0].id;renderPicker();renderSpots();fillSpotSelect();return}
 });
-$("scrub").addEventListener("input",e=>{const v=+e.target.value;setTime(v?Math.floor(pacNow()/H)*H+v*H:null)});
-const stepBy=d=>{const base=Math.floor(pacNow()/H)*H,v=(selT==null?0:(selT-base)/H)+d;setTime(v>0?base+v*H:null)};
+/* Timeline: 72 hours fill the visible width; drag it sideways to move through the full forecast.
+   The needle in the middle marks the hour being viewed. Bars show each hour's score; shaded bands are night. */
+let tlKey="",tlPx=4,tlFromScroll=false,tlRaf=0;
+let tlRz;window.addEventListener("resize",()=>{clearTimeout(tlRz);tlRz=setTimeout(()=>{tlKey="";if(DATA.loadedAt&&!$("tab-today").hidden)renderToday()},200)});
+function buildTimeline(site,base,mx){
+  const tl=$("tl"),W=tl.clientWidth||300,px=W/72,pad=W/2,past=Math.floor(pad/px);
+  const key=site.id+"|"+base+"|"+mx+"|"+Math.round(W)+"|"+DATA.daily+"|"+DATA.loadedAt;
+  if(key===tlKey)return;tlKey=key;tlPx=px;
+  const total=pad*2+mx*px,X=k=>pad+k*px,HB=34;let s="";
+  for(let d=Math.floor((base-past*H)/864e5)*864e5-864e5;d<base+(mx+24)*H;d+=864e5){const sn=sunFor(site,d+12*H),a=Math.max(sn.set,base-past*H),b2=Math.min(sunFor(site,d+36*H).rise,base+(mx+past)*H);
+    if(b2>a)s+='<rect x="'+X((a-base)/H).toFixed(1)+'" y="0" width="'+(((b2-a)/H)*px).toFixed(1)+'" height="'+HB+'" fill="var(--line)" opacity=".35"/>'}
+  for(let k=-past;k<=mx;k++){const c=cond(site,base+k*H);if(!c.tide)continue;const g=grade(c.score),h=3+c.score*.27;
+    s+='<rect x="'+(X(k)-px/2+.4).toFixed(1)+'" y="'+(HB-h).toFixed(1)+'" width="'+Math.max(1,px-.8).toFixed(1)+'" height="'+h.toFixed(1)+'" fill="var(--'+g.c+')"'+(k<0?' opacity=".35"':"")+"/>"}
+  for(let d=Math.floor((base-past*H)/864e5)*864e5;d<=base+(mx+past)*H;d+=864e5){const x=X((d-base)/H);if(x<0||x>total)continue;
+    s+='<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="0" y2="52" stroke="var(--ink2)" stroke-width="1" opacity=".55"/><text x="'+(x+4).toFixed(1)+'" y="47">'+DOW[new Date(d).getUTCDay()]+" "+new Date(d).getUTCDate()+"</text>"}
+  const sv=$("tlSvg");sv.setAttribute("width",total.toFixed(0));sv.setAttribute("viewBox","0 0 "+total.toFixed(1)+" 52");sv.innerHTML=s;
+}
+$("tl").addEventListener("scroll",()=>{if(tlRaf)return;tlRaf=requestAnimationFrame(()=>{tlRaf=0;
+  const base=Math.floor(pacNow()/H)*H,k=Math.max(0,Math.round($("tl").scrollLeft/tlPx)),cur=selT==null?0:Math.round((selT-base)/H);
+  if(k!==cur){tlFromScroll=true;setTime(k>0?base+k*H:null);tlFromScroll=false}})},{passive:true});
+$("tl").addEventListener("keydown",e=>{const d={ArrowRight:1,ArrowLeft:-1,PageDown:24,PageUp:-24}[e.key];if(d){e.preventDefault();stepBy(d)}else if(e.key==="Home"){e.preventDefault();setTime(null)}});
+(()=>{const tl=$("tl");let x0=0,s0=0,on=false;   // mouse drag; touch screens scroll natively
+  tl.addEventListener("pointerdown",e=>{if(e.pointerType!=="mouse")return;on=true;x0=e.clientX;s0=tl.scrollLeft;tl.classList.add("drag");tl.setPointerCapture(e.pointerId)});
+  tl.addEventListener("pointermove",e=>{if(on)tl.scrollLeft=s0-(e.clientX-x0)});
+  const end=()=>{on=false;tl.classList.remove("drag")};tl.addEventListener("pointerup",end);tl.addEventListener("pointercancel",end);})();
+const stepBy=d=>{const base=Math.floor(pacNow()/H)*H,v=Math.max(0,(selT==null?0:(selT-base)/H)+d);setTime(v>0?base+v*H:null)};
 $("stepBack").addEventListener("click",()=>stepBy(-1));$("stepFwd").addEventListener("click",()=>stepBy(1));
 $("backNow").addEventListener("click",()=>setTime(null));
 
