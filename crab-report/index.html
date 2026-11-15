@@ -292,7 +292,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 
   <section id="tab-spots" hidden>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="linkbtn" type="button" id="mapToggle">Map view</button><button class="btn small" type="button" id="mapZoom" hidden>Whole coast</button></div>
-    <div id="spotsMapBox" hidden><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" style="margin-top:6px">Each marker shows that spot's best score in the next 36 hours. Tap one for details. Zoom in to see every spot's name.</p></div>
+    <div id="spotsMapBox" hidden><div class="opts" id="mapMode" role="group" aria-label="Scores to show" style="margin:0 0 10px"><button class="chip" type="button" data-m="best" aria-pressed="true">Best in next 36 hrs</button><button class="chip" type="button" data-m="now" aria-pressed="false">Right now</button></div><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" id="mapNote" style="margin-top:6px"></p></div>
     <div id="spotsList" style="display:flex;flex-direction:column;gap:16px"></div>
   </section>
 
@@ -820,16 +820,18 @@ $("backNow").addEventListener("click",()=>setTime(null));
 
 /* ============================== MAP VIEW ============================== */
 /* Leaflet (bundled in vendor/) with OpenStreetMap tiles; loaded only when the map is first opened. */
+let mapMode="best";
 let spotRows=[],mapOn=false,map=null,mapLayer=null,mapWide=false,leafP=null;
 function loadLeaflet(){return leafP||(leafP=new Promise((res,rej)=>{const l=document.createElement("link");l.rel="stylesheet";l.href="vendor/leaflet/leaflet.css";document.head.appendChild(l);
   const sc=document.createElement("script");sc.src="vendor/leaflet/leaflet.js";sc.onload=res;sc.onerror=()=>{leafP=null;rej(new Error("map"))};document.head.appendChild(sc)}))}
 function mapBounds(){const all=allSites(),fv=all.filter(s=>favs.has(s.id)),set=mapWide||!fv.length?all:fv;
   return L.latLngBounds(set.map(s=>[s.lat,s.lon])).pad(mapWide?.12:.22)}
 function drawMap(){
+  $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 36 hours.")+" Tap one for details. Zoom in to see every spot's name.";
   if(!map||!window.L)return;const now=pacNow();mapLayer.clearLayers();
-  spotRows.forEach(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?"n":grade(sc).c[0],fav=favs.has(s.id);
+  spotRows.forEach(({s,c,w:wBest,ok})=>{const w=mapMode==="now"?null:wBest,sc=w?w.score:c?c.score:null,g=sc==null?"n":grade(sc).c[0],fav=favs.has(s.id);
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",iconSize:[0,0],html:'<div class="mk'+(fav?" favm":"")+'"><b class="'+g+'">'+(sc==null?"–":sc)+"</b><span>"+(fav?"★ ":"")+esc(s.short||s.name)+"</span></div>"}),zIndexOffset:(fav?2000:0)+(sc||0)*10,keyboard:true,title:s.name});
-    m.bindPopup("<h3>"+esc(s.name)+"</h3>"+(w?"<div><b>"+w.score+" "+grade(w.score).w+"</b> · "+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</div>":ok?"<div>No good window in the next 36 hours"+(c?" · right now "+c.score:"")+"</div>":"")+(s.advisory?'<div style="color:#b3261e;font-weight:600;margin-top:4px">Closed by health order. Check CDFW.</div>':"")+'<button class="btn small" type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+">See the full report</button>",{maxWidth:250,offset:[0,-34]});
+    m.bindPopup("<h3>"+esc(s.name)+"</h3>"+(w?"<div><b>"+w.score+" "+grade(w.score).w+"</b> · "+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</div>":mapMode==="now"&&c?"<div><b>"+c.score+" "+grade(c.score).w+"</b> · right now"+(wBest?"<br>Best in 36 hrs: "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</div>":ok?"<div>No good window in the next 36 hours"+(c?" · right now "+c.score:"")+"</div>":"")+(s.advisory?'<div style="color:#b3261e;font-weight:600;margin-top:4px">Closed by health order. Check CDFW.</div>':"")+'<button class="btn small" type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+">See the full report</button>",{maxWidth:250,offset:[0,-34]});
     m.addTo(mapLayer)});
 }
 async function showMap(on){
@@ -843,6 +845,7 @@ async function showMap(on){
   map.invalidateSize();drawMap();
 }
 $("mapToggle").addEventListener("click",()=>showMap(!mapOn));
+$("mapMode").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;mapMode=b.dataset.m;$("mapMode").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));drawMap()});
 $("mapZoom").addEventListener("click",()=>{mapWide=!mapWide;$("mapZoom").textContent=mapWide?"Near favorites":"Whole coast";if(map)map.fitBounds(mapBounds(),{maxZoom:13})});
 
 /* ============================== RENDER: SPOTS ============================== */
