@@ -89,9 +89,26 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .scene canvas{display:block;width:100%;aspect-ratio:16/9;max-height:400px}
 .scene .where{position:absolute;left:12px;top:10px;font:italic 500 1.05rem var(--f-display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
 .scene .when{position:absolute;left:12px;top:36px;font:600 .95rem var(--f-data);letter-spacing:.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);text-transform:uppercase}
-.scrub{display:flex;align-items:center;gap:10px;margin-top:8px}
-.scrub input{flex:1;min-width:0;accent-color:var(--magenta);height:32px}
-.scrub button{flex:none;border:1.5px solid var(--ink);background:var(--card);border-radius:8px;padding:6px 12px;font:600 .85rem var(--f-data);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.scrub{display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:start;margin-top:8px}
+.scrub .track{min-width:0}
+.scrub input{width:100%;accent-color:var(--magenta);height:32px;margin:0;display:block}
+.scrub .step{border:1.5px solid var(--ink);background:var(--card);border-radius:8px;height:34px;font:700 1.2rem/1 var(--f-data);cursor:pointer;color:var(--ink)}
+.scrub .step:disabled{opacity:.35;cursor:default}
+.ticks{position:relative;height:16px;margin:0 8px}
+.ticks span{position:absolute;transform:translateX(-50%);font:600 .68rem var(--f-data);letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);white-space:nowrap}
+.ticks i{position:absolute;top:-4px;width:1px;height:12px;background:var(--line)}
+.viewing{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--magenta);color:var(--card);border-radius:10px;padding:7px 8px 7px 14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.viewing small{display:block;font:600 .72rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.viewing .btn{flex:none;padding:6px 12px;background:var(--card);color:var(--ink);border-color:var(--card)}
+.viewing.flash{animation:flash .9s ease-out}
+@keyframes flash{0%{transform:scale(1.03);box-shadow:0 0 0 6px color-mix(in srgb,var(--magenta) 35%,transparent)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.viewing.flash{animation:none}}
+.whybox{grid-column:1/-1;border-top:1.5px solid var(--line);padding-top:8px}
+.whybox summary{cursor:pointer;font-weight:600;color:var(--magenta);list-style:none}
+.whybox summary::-webkit-details-marker{display:none}
+.whybox summary::after{content:" ›";display:inline-block;transition:transform .15s}
+.whybox[open] summary::after{transform:rotate(90deg)}
+.whybox .brk{padding:6px 0 0}
 
 /* verdict */
 .verdict{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:start}
@@ -127,21 +144,15 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:baseline}
 
 .windows{display:flex;flex-direction:column;gap:8px}
-.win{border:1.5px solid var(--line);border-radius:8px}
-.win summary{list-style:none;cursor:pointer;padding:10px;border-radius:8px}
-.win summary::-webkit-details-marker{display:none}
-.win .row{display:grid;grid-template-columns:52px 1fr 18px;gap:12px;align-items:center}
-.win .chev{color:var(--ink2);font-size:1.1rem;transition:transform .15s}
-.win[open] .chev{transform:rotate(90deg)}
-.why{padding:2px 12px 12px}
-.why .f{display:grid;grid-template-columns:62px 1fr 46px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.93rem}
-.why .f b{font:700 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
-.why .f .pts{text-align:right;font:600 .9rem var(--f-data);font-variant-numeric:tabular-nums;color:var(--ink2)}
-.why .sum{font-size:.88rem;color:var(--ink2);padding-top:6px;border-top:1px solid var(--line)}
+.win{border:1.5px solid var(--line);border-radius:8px;display:grid;grid-template-columns:52px 1fr 18px;gap:12px;align-items:center;padding:10px;width:100%;text-align:left;background:none;font:inherit;color:inherit;cursor:pointer}
+.win .chev{color:var(--ink2);font-size:1.1rem}
+.win[aria-pressed="true"],button.day[aria-pressed="true"]{border-color:var(--magenta);box-shadow:inset 0 0 0 1.5px var(--magenta)}
+.brk{padding:2px 0 4px}
+.brk .f{display:grid;grid-template-columns:62px 1fr 46px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.93rem}
+.brk .f b{font:700 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
+.brk .f .pts{text-align:right;font:600 .9rem var(--f-data);font-variant-numeric:tabular-nums;color:var(--ink2)}
+.brk .sum{font-size:.88rem;color:var(--ink2);padding-top:6px;border-top:1px solid var(--line)}
 button.day{font:inherit;color:inherit;background:none;cursor:pointer}
-button.day[aria-expanded="true"]{border-color:var(--ink);background:var(--water)}
-#dayWhy{margin-top:8px;border:1.5px solid var(--line);border-radius:8px;padding-top:8px}
-#dayWhy .hd{padding:0 12px 6px;font-weight:600}
 .win .sc{font:700 1.5rem/1 var(--f-data);text-align:center;border-radius:8px;padding:9px 0}
 .win .t{font-weight:600}
 .win .n{font-size:.9rem;color:var(--ink2)}
@@ -218,6 +229,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
   <div class="picker" id="picker" role="group" aria-label="Choose a spot"></div>
 
   <section id="tab-today">
+    <div id="viewing" class="viewing" hidden role="status"><div><small id="viewSmall">Viewing forecast for</small><span id="viewTxt"></span></div><button class="btn small" type="button" id="backNow">Back to now</button></div>
     <div id="status" class="alert fair"><span>Hauling in tides, swell and weather…</span></div>
     <div id="today" hidden style="display:flex;flex-direction:column;gap:16px">
       <div>
@@ -226,30 +238,31 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
           <div class="where" id="sceneWhere"></div><div class="when" id="sceneWhen"></div>
         </div>
         <div class="scrub">
-          <button type="button" id="nowBtn">Now</button>
-          <input type="range" id="scrub" min="0" max="72" value="0" step="1" aria-label="Look ahead, hours from now">
-          <span class="num lbl" id="scrubLbl" style="min-width:74px;text-align:right">Now</span>
+          <button type="button" class="step" id="stepBack" aria-label="One hour earlier">‹</button>
+          <div class="track"><input type="range" id="scrub" min="0" max="72" value="0" step="1" aria-label="Forecast time, hours from now"><div class="ticks" id="ticks" aria-hidden="true"></div></div>
+          <button type="button" class="step" id="stepFwd" aria-label="One hour later">›</button>
         </div>
       </div>
 
       <div class="card verdict">
         <svg class="gauge" id="gauge" viewBox="0 0 200 128" width="150" height="96" preserveAspectRatio="xMidYMid meet" role="img"></svg>
         <div><div class="lbl" id="vLbl">Crabbing outlook</div><div class="word" id="vWord"></div><p class="why" id="vWhy"></p></div>
+        <details class="whybox" id="whyBox"><summary>Why this score?</summary><div id="whyBody"></div></details>
       </div>
 
       <div id="alerts" style="display:flex;flex-direction:column;gap:8px"></div>
 
       <div class="grid" id="inst"></div>
 
-      <div class="card"><h2>Tide &amp; crabbing score, next 48 hours</h2>
+      <div class="card"><h2>Tide &amp; crabbing score <span class="lbl" id="chartSpan" style="font-size:.85rem;white-space:nowrap">(next 48 hrs)</span></h2>
         <div class="chartbox"><svg id="tideChart" viewBox="0 0 720 250" role="img" aria-label="Tide height and crabbing score for the next 48 hours"></svg></div>
         <div class="legend"><span><i style="background:var(--ink)"></i>Tide height (ft, MLLW)</span><span><i style="background:var(--good-bg);border:1px solid var(--good)"></i>Good crabbing window</span><span><i style="background:var(--line)"></i>Night</span></div>
       </div>
 
       <div class="card"><h2>Best times to go <span class="lbl" style="font-size:.85rem;white-space:nowrap">(next 72 hrs)</span></h2><div class="windows" id="windows"></div>
-        <div class="lbl" style="margin:14px 0 8px">Next ten days — best score each day</div><div class="days" id="days"></div><div id="dayWhy" hidden></div><p class="fine" style="margin-top:8px">Tap any time or day to see why it scored that way. Swell and wind forecasts past five days are rough guides; the tides are exact.</p></div>
+        <div class="lbl" style="margin:14px 0 8px">Next ten days — best score each day</div><div class="days" id="days"></div><p class="fine" style="margin-top:8px">Tap a time or day to switch the whole page to that hour. Swell and wind forecasts past five days are rough guides; the tides are exact.</p></div>
 
-      <div class="card"><h2>What to bring</h2><div class="gear" id="gear"></div></div>
+      <div class="card"><h2>What to bring <span class="lbl" id="gearWhen" style="font-size:.85rem"></span></h2><div class="gear" id="gear"></div></div>
 
       <div class="card" id="spotCard"></div>
     </div>
@@ -571,7 +584,7 @@ function explain(c,site){
   else if(c.flags.includes("surf"))cap="Surf this big is unsafe from shore. Score capped at 18.";
   else if(c.flags.includes("wind"))cap="Wind this strong caps the score at 22.";
   else if(c.eff!=null&&c.eff>=6)cap="Swell over 6 ft at the water caps the score at 38.";
-  return'<div class="why">'+rows.map(r=>'<div class="f"><b class="t-'+r[0]+'">'+r[1]+"</b><span>"+r[2]+'</span><span class="pts">'+r[3]+"</span></div>").join("")+(cap?'<div class="sum">'+cap+"</div>":"")+"</div>";
+  return'<div class="brk">'+rows.map(r=>'<div class="f"><b class="t-'+r[0]+'">'+r[1]+"</b><span>"+r[2]+'</span><span class="pts">'+r[3]+"</span></div>").join("")+(cap?'<div class="sum">'+cap+"</div>":"")+"</div>";
 }
 function whyText(c,site){
   if(!c.season.open)return"Dungeness season is closed here. It reopens "+fmtDate(c.season.nextOpen)+".";
@@ -579,7 +592,7 @@ function whyText(c,site){
   if(c.flags.includes("surf"))return"Surf is running about "+c.eff.toFixed(0)+" ft at the water's edge. Too rough to fish safely or keep gear on the bottom.";
   if(c.flags.includes("wind"))return"Wind is howling, gusting near "+Math.round(c.w.gust||c.w.wind)+" mph. Casting and tending gear will be miserable.";
   if(c.tide){const r=Math.abs(c.tide.rate)*(site.current||1);
-    bits.push(c.tide.toSlack<=.75?c.tide.stage+" now, so gear stays put and crabs are walking":r>1?"the tide is running hard, so gear will roll until "+(c.tide.next.hi?"high":"low")+" slack at "+fmtTime(c.tide.next.t):r>.55?"moderate current, easing toward "+(c.tide.next.hi?"high":"low")+" slack at "+fmtTime(c.tide.next.t):"gentle tide movement")}
+    bits.push(c.tide.toSlack<=.75?c.tide.stage+", so gear stays put and crabs are walking":r>1?"the tide is running hard, so gear will roll until "+(c.tide.next.hi?"high":"low")+" slack at "+fmtTime(c.tide.next.t):r>.55?"moderate current, easing toward "+(c.tide.next.hi?"high":"low")+" slack at "+fmtTime(c.tide.next.t):"gentle tide movement")}
   if(c.eff!=null)bits.push(c.eff<2.5?"calm water":c.eff<4.5?"some swell":"heavy swell");
   if(c.windEff!=null)bits.push(c.windEff<8?"light wind":c.windEff<16?"a steady breeze":"strong wind");
   if(c.runoff>.25)bits.push("recent rain is pushing fresh water out of the bay");
@@ -591,7 +604,13 @@ function whyText(c,site){
 /* ============================== RENDER: TODAY ============================== */
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
-let viewOffset=0, sceneState=null;
+let selT=null, sceneState=null;   // selT: chosen forecast hour (wall ms), null = right now
+const whenLabel=(t,now)=>{const f=fmtDay(t,now);return(f==="Today"?"Today":f==="Tomorrow"?"Tomorrow, "+fmtDate(t).slice(4):fmtDate(t))+", "+fmtTime(t)};
+function maxAhead(site,base){const sea=DATA.sea[site.id],wx=(DATA.wx[site.id]||{}).h;if(!sea||!wx)return 72;
+  for(let k=240;k>0;k--){const key=hourKey(base+k*H),a=sea.get(key),b=wx.get(key);if(a&&a.wave!=null&&b&&b.wind!=null)return k}return 72}
+function setTime(t,opts){const now=pacNow(),base=Math.floor(now/H)*H;selT=(t==null||t<=base)?null:Math.floor(t/H)*H;renderToday();
+  if(opts&&opts.jump){const v=$("viewing");if(!v.hidden){v.classList.remove("flash");void v.offsetWidth;v.classList.add("flash")}
+    window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}}
 function mapLinks(s,small){const q=s.lat+","+s.lon,c=small?"btn small":"btn";
   return'<a class="'+c+'" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q+'">Google Maps</a><a class="'+c+'" target="_blank" rel="noopener" href="https://maps.apple.com/?daddr='+q+"&q="+encodeURIComponent(s.name)+'">Apple Maps</a>'}
 let curTab="today";
@@ -601,7 +620,7 @@ function renderPicker(){
   $("picker").innerHTML=list.map(s=>'<button class="chip" type="button" data-id="'+s.id+'" aria-pressed="'+(curTab==="today"&&s.id===current)+'">'+(favs.has(s.id)?'<span class="st">★</span>':"")+esc(s.short||s.name)+"</button>").join("")+'<button class="chip more" type="button" data-id="" aria-pressed="'+(curTab==="spots")+'">More spots…</button>';
 }
 $("picker").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(!b.dataset.id){showTab("spots");return}selectSite(b.dataset.id)});
-function selectSite(id){current=id;store.set("current",id);viewOffset=0;$("scrub").value=0;renderPicker();showTab("today");renderToday()}
+function selectSite(id,t){current=id;store.set("current",id);if(t!==undefined)selT=t;renderPicker();showTab("today");renderToday()}
 function gaugeSVG(sc,g){
   const a=Math.PI*(1-sc/100),cx=100,cy=100,r=80,nx=cx+Math.cos(a)*66,ny=cy-Math.sin(a)*66;
   const arc=(f,t,col)=>{const A=Math.PI*(1-f/100),B=Math.PI*(1-t/100);return'<path d="M'+(cx+Math.cos(A)*r)+" "+(cy-Math.sin(A)*r)+" A"+r+" "+r+" 0 0 1 "+(cx+Math.cos(B)*r)+" "+(cy-Math.sin(B)*r)+'" fill="none" stroke="var(--'+col+')" stroke-width="14"/>'};
@@ -611,13 +630,23 @@ function renderToday(){
   const site=siteById(current);if(!site||!DATA.loadedAt)return;
   if(!hasData(site)){$("today").hidden=true;setStatus("fair","<span>Hauling in the forecast for "+esc(site.name)+"…</span>");
     (DATA.restP||(store.get("c.k3.wx.rest",null)?ensureRest():Promise.resolve())).then(()=>hasData(site)?null:loadSites([site],"one."+site.id,"any")).then(()=>{if(current===site.id&&hasData(site))renderToday()},e=>{if(current===site.id)setStatus("bad","<b>No signal.</b> <span>Couldn't reach "+(e.what||"the forecast services")+".</span>",true)});return}
-  const now=pacNow(),t=viewOffset?Math.floor(now/H)*H+viewOffset*H:now,c=cond(site,t),g=grade(c.score);
+  const now=pacNow(),base=Math.floor(now/H)*H,mx=maxAhead(site,base);
+  if(selT!=null&&selT<=base)selT=null;if(selT!=null&&selT>base+mx*H)selT=base+mx*H;
+  const t=selT==null?now:selT,c=cond(site,t),g=grade(c.score),lbl=whenLabel(t,now);
+  // time controls
+  const sl=$("scrub");sl.max=mx;sl.value=selT==null?0:Math.round((selT-base)/H);$("stepBack").disabled=selT==null;$("stepFwd").disabled=+sl.value>=mx;
+  // day labels sit at noon of each day, tick marks at midnight; single letters when space is tight
+  const tw=$("ticks").clientWidth||300,perDay=tw/(mx/24),one=perDay<34;let tk="";
+  for(let d=Math.floor(base/864e5)*864e5;d<base+mx*H;d+=864e5){const m=(d-base)/(mx*H),n=(d+12*H-base)/(mx*H);
+    if(m>0&&m<1)tk+='<i style="left:'+(m*100).toFixed(2)+'%"></i>';if(n>.02&&n<.98)tk+='<span style="left:'+(n*100).toFixed(2)+'%">'+(one?DOW[new Date(d).getUTCDay()][0]:DOW[new Date(d).getUTCDay()])+"</span>"}
+  $("ticks").innerHTML=tk;
+  $("viewing").hidden=selT==null;$("viewTxt").textContent=lbl;$("viewSmall").textContent=selT!=null&&selT-base>5*864e5?"Viewing · rough forecast":"Viewing forecast for";
+  $("gearWhen").textContent=selT==null?"":"· "+lbl;
   if(!DATA.stale)$("status").hidden=true;$("today").hidden=false;
   $("sceneWhere").textContent=site.name;
-  $("sceneWhen").textContent=viewOffset?fmtDay(t,now)+" "+fmtTime(t):"Now · "+fmtTime(now);
-  $("scrubLbl").textContent=viewOffset?"+"+viewOffset+" hr":"Now";
+  $("sceneWhen").textContent=selT==null?"Now · "+fmtTime(now):lbl;
   $("gauge").innerHTML=gaugeSVG(c.score,g);$("gauge").setAttribute("aria-label","Crabbing score "+c.score+" out of 100");
-  $("vLbl").textContent=(viewOffset?fmtDay(t,now)+" "+fmtTime(t):"Right now")+" · "+(site.short||site.name);
+  $("vLbl").textContent=(selT==null?"Right now":lbl)+" · "+(site.short||site.name);$("whyBody").innerHTML=explain(c,site);
   $("vWord").textContent=g.w;$("vWord").className="word t-"+g.c;$("vWhy").textContent=whyText(c,site);
   sceneState={site,c};
   // instruments
@@ -652,24 +681,19 @@ function renderAlerts(site,c){
   loadAlerts(site).then(al=>{if(site.id!==current||!$("nws"))return;
     $("nws").innerHTML=al.map(p=>'<div class="alert '+(/Severe|Extreme/.test(p.severity)||/warning/i.test(p.event)?"bad":"fair")+'" style="margin-top:8px"><div><b>'+esc(p.event)+".</b> <span>"+esc(p.headline||"")+" (National Weather Service)</span></div></div>").join("")});
 }
-let dayConds=[];
-document.addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(!b)return;const was=b.getAttribute("aria-expanded")==="true",c=dayConds[+b.dataset.day],site=siteById(current);
-  document.querySelectorAll("[data-day]").forEach(x=>x.setAttribute("aria-expanded","false"));
-  if(was||!c){$("dayWhy").hidden=true;return}
-  b.setAttribute("aria-expanded","true");const g=grade(c.score);
-  $("dayWhy").hidden=false;$("dayWhy").innerHTML='<div class="hd">'+fmtDate(c.t)+" "+fmtTime(c.t)+' · <span class="t-'+g.c+'">'+c.score+" "+g.w+"</span></div>"+explain(c,site)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-sel]");if(!b)return;setTime(+b.dataset.sel,{jump:true})});
 function renderWindows(site,now){
   const ws=bestWindows(site,now,72,4);
   $("windows").innerHTML=ws.length?ws.map(w=>{const g=grade(w.score),td=w.tide;
-    return'<details class="win"><summary><div class="row"><div class="sc b-'+g.c+'">'+w.score+'</div><div><div class="t">'+fmtDay(w.from,now)+" "+fmtTime(w.from)+" – "+fmtTime(w.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" ("+td.near.v.toFixed(1)+" ft) · swell "+(w.wave==null?"–":w.wave.toFixed(0)+" ft")+" · wind "+(w.w.wind==null?"–":Math.round(w.w.wind)+" mph")+'</div></div><span class="chev" aria-hidden="true">›</span></div></summary>'+explain(w,site)+"</details>"}).join("")
+    return'<button type="button" class="win" data-sel="'+w.t+'" aria-pressed="'+(selT===w.t)+'"><div class="sc b-'+g.c+'">'+w.score+'</div><div><div class="t">'+fmtDay(w.from,now)+" "+fmtTime(w.from)+" – "+fmtTime(w.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" ("+td.near.v.toFixed(1)+" ft) · swell "+(w.wave==null?"–":w.wave.toFixed(0)+" ft")+" · wind "+(w.w.wind==null?"–":Math.round(w.w.wind)+" mph")+'</div></div><span class="chev" aria-hidden="true">›</span></button>'}).join("")
     :'<p class="empty">'+(seasonInfo(site,now).open?"No decent windows in the next three days. Check the other spots or wait for the swell and wind to lie down.":"Season is closed.")+"</p>";
   const days=[];const d0=Math.floor(now/864e5)*864e5;
   for(let d=0;d<10;d++){const hs=hoursAhead(site,d0+d*864e5,24).filter(c=>c.tide&&c.t>=now-H&&!(site.dayOnly&&c.day<.5));if(!hs.length)continue;const hh=hs.filter(c=>{const h=new Date(c.t).getUTCHours();return h>=5&&h<=21&&c.wave!=null&&c.w.wind!=null});if(!hh.length)continue;const b=hh.reduce((a,c)=>c.score>a.score?c:a);days.push(b)}
-  dayConds=days;$("dayWhy").hidden=true;
-  $("days").innerHTML=days.map((b,i)=>{const g=grade(b.score);return'<button type="button" class="day" data-day="'+i+'" aria-expanded="false"><div class="lbl">'+(fmtDay(b.t,now)==="Today"?"Today":DOW[new Date(b.t).getUTCDay()]+" "+new Date(b.t).getUTCDate())+'</div><div class="bar"><i style="height:'+Math.max(6,b.score)+"%;background:var(--"+g.c+')"></i></div><div class="s t-'+g.c+'">'+b.score+'</div><div class="n">'+fmtTime(b.t)+"</div></button>"}).join("");
+  $("days").innerHTML=days.map((b,i)=>{const g=grade(b.score);return'<button type="button" class="day" data-sel="'+b.t+'" aria-pressed="'+(selT===b.t)+'"><div class="lbl">'+(fmtDay(b.t,now)==="Today"?"Today":DOW[new Date(b.t).getUTCDay()]+" "+new Date(b.t).getUTCDate())+'</div><div class="bar"><i style="height:'+Math.max(6,b.score)+"%;background:var(--"+g.c+')"></i></div><div class="s t-'+g.c+'">'+b.score+'</div><div class="n">'+fmtTime(b.t)+"</div></button>"}).join("");
 }
 function renderChart(site,now,sel){
-  const W=720,Hh=250,L=38,R=12,T=22,B=30,t0=Math.floor(now/H)*H-3*H,t1=t0+51*H;
+  const W=720,Hh=250,L=38,R=12,T=22,B=30,base=Math.floor(now/H)*H,far=sel-base>40*H,t0=far?Math.floor(sel/H)*H-20*H:base-3*H,t1=t0+51*H;
+  $("chartSpan").textContent=far?"(around "+fmtDate(sel)+")":"(next 48 hrs)";
   const e=(DATA.tide[site.station]||DATA.tide[FALLBACK_STATION]||[]).filter(p=>p.t>=t0-8*H&&p.t<=t1+8*H);
   if(!e.length){$("tideChart").innerHTML="";return}
   const lo=Math.floor(Math.min(...e.map(p=>p.v),0)),hi=Math.ceil(Math.max(...e.map(p=>p.v))+.4);
@@ -686,7 +710,7 @@ function renderChart(site,now,sel){
   s+='<path d="'+d+"L"+X(t1)+" "+Y(lo)+"L"+X(t0)+" "+Y(lo)+'Z" fill="var(--ink)" opacity=".1"/><path d="'+d+'" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>';
   e.filter(p=>p.t>t0+H&&p.t<t1-H).forEach(p=>{s+='<circle cx="'+X(p.t)+'" cy="'+Y(p.v)+'" r="3.5" fill="var(--card)" stroke="var(--ink)" stroke-width="2"/><text x="'+X(p.t)+'" y="'+(Y(p.v)+(p.hi?-9:17))+'" text-anchor="middle" style="fill:var(--ink);font-weight:600">'+p.v.toFixed(1)+" · "+fmtTime(p.t).replace(" ","")+"</text>"});
   const td=tideAt(site,sel);
-  if(td)s+='<line x1="'+X(sel)+'" x2="'+X(sel)+'" y1="'+(T-6)+'" y2="'+(Hh-B)+'" stroke="var(--magenta)" stroke-width="2"/><circle cx="'+X(sel)+'" cy="'+Y(td.h)+'" r="5.5" fill="var(--magenta)" stroke="var(--card)" stroke-width="2"/><text x="'+Math.min(W-R-20,Math.max(L+20,X(sel)))+'" y="12" text-anchor="middle" style="fill:var(--magenta);font-weight:700">'+(sel===now?"NOW":fmtTime(sel).toUpperCase())+"</text>";
+  if(td)s+='<line x1="'+X(sel)+'" x2="'+X(sel)+'" y1="'+(T-6)+'" y2="'+(Hh-B)+'" stroke="var(--magenta)" stroke-width="2"/><circle cx="'+X(sel)+'" cy="'+Y(td.h)+'" r="5.5" fill="var(--magenta)" stroke="var(--card)" stroke-width="2"/><text x="'+Math.min(W-R-20,Math.max(L+20,X(sel)))+'" y="12" text-anchor="middle" style="fill:var(--magenta);font-weight:700">'+(sel===now?"NOW":(far?DOW[new Date(sel).getUTCDay()].toUpperCase()+" ":"")+fmtTime(sel).toUpperCase())+"</text>";
   $("tideChart").innerHTML=s;
 }
 function renderGear(site,c){
@@ -720,11 +744,13 @@ const starBtn=s=>'<button class="star" type="button" data-star="'+s.id+'" aria-p
 document.addEventListener("click",e=>{
   const st=e.target.closest("[data-star]");if(st){const id=st.dataset.star;favs.has(id)?favs.delete(id):favs.add(id);store.set("favs",[...favs]);renderPicker();renderSpots();if(DATA.loadedAt)renderSpotCard(siteById(current));toast(favs.has(id)?"Added to favorites":"Removed from favorites");return}
   const lg=e.target.closest("[data-log]");if(lg){showTab("log");$("lSpot").value=lg.dataset.log;$("lKeep").focus();return}
-  const go=e.target.closest("[data-go]");if(go){selectSite(go.dataset.go);window.scrollTo(0,0);return}
+  const go=e.target.closest("[data-go]");if(go){selectSite(go.dataset.go,go.dataset.at?Math.floor(+go.dataset.at/H)*H:undefined);window.scrollTo(0,0);return}
   const rm=e.target.closest("[data-rmspot]");if(rm){custom=custom.filter(s=>s.id!==rm.dataset.rmspot);store.set("custom",custom);favs.delete(rm.dataset.rmspot);store.set("favs",[...favs]);if(current===rm.dataset.rmspot)current=SITES[0].id;renderPicker();renderSpots();fillSpotSelect();return}
 });
-$("scrub").addEventListener("input",e=>{viewOffset=+e.target.value;renderToday()});
-$("nowBtn").addEventListener("click",()=>{viewOffset=0;$("scrub").value=0;renderToday()});
+$("scrub").addEventListener("input",e=>{const v=+e.target.value;setTime(v?Math.floor(pacNow()/H)*H+v*H:null)});
+const stepBy=d=>{const base=Math.floor(pacNow()/H)*H,v=(selT==null?0:(selT-base)/H)+d;setTime(v>0?base+v*H:null)};
+$("stepBack").addEventListener("click",()=>stepBy(-1));$("stepFwd").addEventListener("click",()=>stepBy(1));
+$("backNow").addEventListener("click",()=>setTime(null));
 
 /* ============================== RENDER: SPOTS ============================== */
 function renderSpots(){
@@ -735,7 +761,7 @@ function renderSpots(){
   const bet=ready?rows.filter(r=>!favs.has(r.s.id)&&r.w&&!r.s.custom&&!r.s.advisory).sort((a,b)=>b.w.score-a.w.score)[0]:null;
   const favBest=ready?Math.max(0,...rows.filter(r=>favs.has(r.s.id)&&r.w).map(r=>r.w.score)):0;
   let h="";
-  if(bet&&bet.w.score>=55)h+='<div class="bet"><div class="lbl" style="color:inherit">Somewhere new to try</div><h2>'+esc(bet.s.name)+"</h2><p>Scores "+bet.w.score+" "+dayLong(bet.w.t,now)+" around "+fmtTime(bet.w.t)+(bet.w.score>favBest+4?", better than your favorites ("+favBest+")":"")+". "+esc(bet.s.blurb||"")+'</p><button class="btn" type="button" data-go="'+bet.s.id+'">See the full report</button></div>';
+  if(bet&&bet.w.score>=55)h+='<div class="bet"><div class="lbl" style="color:inherit">Somewhere new to try</div><h2>'+esc(bet.s.name)+"</h2><p>Scores "+bet.w.score+" "+dayLong(bet.w.t,now)+" around "+fmtTime(bet.w.t)+(bet.w.score>favBest+4?", better than your favorites ("+favBest+")":"")+". "+esc(bet.s.blurb||"")+'</p><button class="btn" type="button" data-go="'+bet.s.id+'" data-at="'+bet.w.t+'">See the full report</button></div>';
   h+='<p class="fine">Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm. Tap a name for the full report.</p>';
   if(missing)h+=DATA.restErr?'<div class="alert fair"><div><b>Some spots didn\'t load.</b> <span>'+(DATA.restErr.busy?"The forecast service is busy. Give it a minute.":"Couldn't reach "+(DATA.restErr.what||"the forecast services")+".")+'</span><button class="btn small" type="button" data-retry-rest>Try again</button></div></div>':'<div class="alert fair"><span>Hauling in the other spots…</span></div>';
   h+=rows.map(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
@@ -1004,8 +1030,11 @@ $("compass").addEventListener("click",()=>{const b=$("compass");if(b.classList.c
 document.addEventListener("click",e=>{if(e.target.closest("[data-retry-rest]")){DATA.restErr=null;renderSpots();return}const rb=e.target.closest("[data-retry]");if(rb){if(rb.closest(".slim")){rb.disabled=true;rb.textContent="Updating…"}else setStatus("fair","<span>Trying again…</span>");boot(false)}});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();fillSpotSelect();setWhenNow();renderLog();boot(false);
-setInterval(()=>{if(!document.hidden&&!viewOffset&&DATA.loadedAt&&!document.querySelector('.win[open],[data-day][aria-expanded="true"]'))renderToday()},5*6e4);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&DATA.loadedAt&&pacNow()-DATA.loadedAt>FRESH_MIN*6e4)boot(false)});
+setInterval(()=>{if(!document.hidden&&DATA.loadedAt&&$("tab-today").hidden===false)renderToday()},5*6e4);
+let hiddenAt=0;
+document.addEventListener("visibilitychange",()=>{if(document.hidden){hiddenAt=Date.now();return}
+  if(selT!=null&&hiddenAt&&Date.now()-hiddenAt>30*6e4){selT=null;if(DATA.loadedAt)renderToday()}
+  if(DATA.loadedAt&&pacNow()-DATA.loadedAt>FRESH_MIN*6e4)boot(false)});
 </script>
 </body>
 </html>
