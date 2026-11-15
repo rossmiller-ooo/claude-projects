@@ -62,6 +62,8 @@ button,select,input,textarea{font:inherit;color:inherit}
 
 /* masthead */
 .mast{background:var(--deep);color:var(--deep-ink);padding-top:env(safe-area-inset-top,0px)}
+/* home-screen app: sit the header a little lower so the phone's status-bar fade clears the title */
+@media (display-mode:standalone){.mast{padding-top:calc(env(safe-area-inset-top,0px) + 12px)}}
 /* solid navy behind the phone's status bar, so nothing fades over the title in home-screen mode */
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--deep);z-index:30}
 .mast .wrap{display:flex;align-items:center;gap:12px;padding-block:12px}
