@@ -86,7 +86,6 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .scene{position:relative;border-radius:10px;overflow:hidden;border:2px solid var(--ink);background:#7fb6cf}
 .scene canvas{display:block;width:100%;aspect-ratio:16/9;max-height:400px}
 .scene .where{position:absolute;left:12px;top:10px;font:italic 500 1.05rem var(--f-display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.scene .when{position:absolute;left:12px;top:36px;font:600 .95rem var(--f-data);letter-spacing:.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);text-transform:uppercase}
 .scrub{display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:start;margin-top:8px}
 .scrub .track{min-width:0}
 .scrub input{width:100%;accent-color:var(--magenta);height:32px;margin:0;display:block}
@@ -98,6 +97,7 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .viewing{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--magenta);color:var(--card);border-radius:10px;padding:7px 8px 7px 14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .viewing small{display:block;font:600 .72rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
 .viewing .btn{flex:none;padding:6px 12px;background:var(--card);color:var(--ink);border-color:var(--card)}
+.viewing.atnow .btn{visibility:hidden}
 .viewing.flash{animation:flash .9s ease-out}
 @keyframes flash{0%{transform:scale(1.03);box-shadow:0 0 0 6px color-mix(in srgb,var(--magenta) 35%,transparent)}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){.viewing.flash{animation:none}}
@@ -233,7 +233,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
       <div>
         <div class="scene">
           <canvas id="scene" width="960" height="540" role="img" aria-label="Animated view of the water at this spot"></canvas>
-          <div class="where" id="sceneWhere"></div><div class="when" id="sceneWhen"></div>
+          <div class="where" id="sceneWhere"></div>
         </div>
         <div class="scrub">
           <button type="button" class="step" id="stepBack" aria-label="One hour earlier">‹</button>
@@ -592,7 +592,7 @@ const whenLabel=(t,now)=>{const f=fmtDay(t,now);return(f==="Today"?"Today":f==="
 function maxAhead(site,base){const sea=DATA.sea[site.id],wx=(DATA.wx[site.id]||{}).h;if(!sea||!wx)return 72;
   for(let k=240;k>0;k--){const key=hourKey(base+k*H),a=sea.get(key),b=wx.get(key);if(a&&a.wave!=null&&b&&b.wind!=null)return k}return 72}
 function setTime(t,opts){const now=pacNow(),base=Math.floor(now/H)*H;selT=(t==null||t<=base)?null:Math.floor(t/H)*H;renderToday();
-  if(opts&&opts.jump){const v=$("viewing");if(!v.hidden){v.classList.remove("flash");void v.offsetWidth;v.classList.add("flash")}
+  if(opts&&opts.jump){const v=$("viewing");v.classList.remove("flash");void v.offsetWidth;v.classList.add("flash");
     window.scrollTo({top:0,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}}
 function mapLinks(s,small){const q=s.lat+","+s.lon,c=small?"btn small":"btn";
   return'<a class="'+c+'" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q+'">Google Maps</a><a class="'+c+'" target="_blank" rel="noopener" href="https://maps.apple.com/?daddr='+q+"&q="+encodeURIComponent(s.name)+'">Apple Maps</a>'}
@@ -623,11 +623,11 @@ function renderToday(){
   for(let d=Math.floor(base/864e5)*864e5;d<base+mx*H;d+=864e5){const m=(d-base)/(mx*H),n=(d+12*H-base)/(mx*H);
     if(m>0&&m<1)tk+='<i style="left:'+(m*100).toFixed(2)+'%"></i>';if(n>.02&&n<.98)tk+='<span style="left:'+(n*100).toFixed(2)+'%">'+(one?DOW[new Date(d).getUTCDay()][0]:DOW[new Date(d).getUTCDay()])+"</span>"}
   $("ticks").innerHTML=tk;
-  $("viewing").hidden=selT==null;$("viewTxt").textContent=lbl;$("viewSmall").textContent=selT!=null&&selT-base>5*864e5?"Viewing · rough forecast":"Viewing forecast for";
+  $("viewing").hidden=false;$("viewing").classList.toggle("atnow",selT==null);$("viewTxt").textContent=selT==null?"Right now, "+fmtTime(now):lbl;
+  $("viewSmall").textContent=selT==null?"Viewing forecast for":selT-base>5*864e5?"Viewing · rough forecast":"Viewing forecast for";$("backNow").tabIndex=selT==null?-1:0;
   $("gearWhen").textContent=selT==null?"":"· "+lbl;
   $("status").hidden=true;$("today").hidden=false;
   $("sceneWhere").textContent=site.name;
-  $("sceneWhen").textContent=selT==null?"Now · "+fmtTime(now):lbl;
   $("gauge").innerHTML=gaugeSVG(c.score,g);$("gauge").setAttribute("aria-label","Crabbing score "+c.score+" out of 100");
   $("vLbl").textContent=(selT==null?"Right now":lbl)+" · "+(site.short||site.name);$("whyBody").innerHTML=explain(c,site);
   $("vWord").textContent=g.w;$("vWord").className="word t-"+g.c;$("vWhy").textContent=whyText(c,site);
@@ -894,9 +894,10 @@ function drawScene(ts){
     cx.beginPath();for(let k=-1;k<=1;k+=2){for(let i=0;i<3;i++){cx.moveTo(k*5,1+i*1.5);cx.lineTo(k*(11+i),-1+i*3.4)}cx.moveTo(k*5,-3);cx.lineTo(k*9,-8)}cx.stroke();
     cx.beginPath();cx.ellipse(0,0,7.5,5,0,0,7);cx.fill();cx.beginPath();cx.arc(-10,-9.5,3.1,0,7);cx.arc(10,-9.5,3.1,0,7);cx.fill();cx.restore()}
   // wind speed beside the flag
-  const lbl=Math.round(wind)+" mph",lx=fx+2-sgn*10;cx.font="700 30px 'Barlow Condensed','Arial Narrow',sans-serif";cx.textAlign=sgn>0?"right":"left";
-  const tw=cx.measureText(lbl).width,bx0=sgn>0?lx-tw-7:lx-7;cx.fillStyle="rgba(10,24,38,.62)";cx.beginPath();cx.rect(bx0,fy-82,tw+14,36);cx.fill();
-  cx.fillStyle="#ffffff";cx.fillText(lbl,lx,fy-55);
+  // always left of the pole so it never runs off the right edge; lifted above the flag when the flag flies left
+  const lbl=Math.round(wind)+" mph",lx=fx-8,ly=sgn>0?0:-46;cx.font="700 30px 'Barlow Condensed','Arial Narrow',sans-serif";cx.textAlign="right";
+  const tw=cx.measureText(lbl).width;cx.fillStyle="rgba(10,24,38,.62)";cx.beginPath();cx.rect(lx-tw-7,fy-82+ly,tw+14,36);cx.fill();
+  cx.fillStyle="#ffffff";cx.fillText(lbl,lx,fy-55+ly);
   // main water
   layer(4,1,0,rgb(mix([12,34,58],[52,122,152],day)));
   // under-water body + light
@@ -989,6 +990,7 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-retry]")){setSt
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();fillSpotSelect();setWhenNow();renderLog();boot();
 setInterval(()=>{if(!document.hidden&&DATA.loadedAt&&$("tab-today").hidden===false)renderToday()},5*6e4);
+setInterval(()=>{if(selT==null&&DATA.loadedAt&&!$("viewing").hidden)$("viewTxt").textContent="Right now, "+fmtTime(pacNow())},30000);
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(document.hidden){hiddenAt=Date.now();return}
   if(selT!=null&&hiddenAt&&Date.now()-hiddenAt>30*6e4){selT=null;if(DATA.loadedAt)renderToday()}
