@@ -206,9 +206,21 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .star{all:unset;cursor:pointer;font-size:1.9rem;line-height:1;color:var(--line);padding:2px 6px}
 .star[aria-pressed="true"]{color:var(--brass)}
 .fav{background:linear-gradient(0deg,var(--card),var(--card)) padding-box;border-color:var(--land-ink);box-shadow:inset 6px 0 0 var(--land)}
-.bet{background:var(--land);color:var(--land-ink);border-radius:10px;padding:14px 16px}
-.bet h2{color:inherit;margin-bottom:4px}
-.bet .btn{margin-top:10px}
+.linkbtn{all:unset;cursor:pointer;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
+.linkbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#spotsMap{height:min(68vh,560px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--water);z-index:0}
+.mk{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;white-space:nowrap;cursor:pointer}
+.mk b{font:700 1.05rem/1 var(--f-data);min-width:34px;text-align:center;padding:5px 7px;border-radius:8px;border:2px solid #12304a;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.mk b.g{background:#dcefe3;color:#1f7a4d}.mk b.f{background:#f6e7c4;color:#8a5600}.mk b.b{background:#f6d9d5;color:#b3261e}.mk b.n{background:#fbfcfa;color:#4b6577}
+.mk.favm b{border-color:#a87a1f;box-shadow:0 0 0 2px #dfc06a,0 1px 4px rgba(0,0,0,.35)}
+.mk span{font:600 .8rem/1.15 var(--f-body);color:#12304a;background:rgba(255,255,255,.88);border-radius:4px;padding:1px 5px;margin-top:2px}
+.mk span{display:none}
+.mk.favm span,.names .mk span{display:block}
+.mk::after{content:"";width:2px;height:7px;background:#12304a}
+.leaflet-popup-content{font:15px/1.4 var(--f-body);color:#12304a;margin:12px 14px}
+.leaflet-popup-content h3{font-size:1.05rem;margin:0 0 2px}
+.leaflet-popup-content .btn{margin-top:8px;background:#12304a;color:#fbfcfa;border-color:#12304a}
+.leaflet-container{font-family:var(--f-body)}
 
 /* forms / log */
 form.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
@@ -278,7 +290,11 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
     </div>
   </section>
 
-  <section id="tab-spots" hidden></section>
+  <section id="tab-spots" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="linkbtn" type="button" id="mapToggle">Map view</button><button class="btn small" type="button" id="mapZoom" hidden>Whole coast</button></div>
+    <div id="spotsMapBox" hidden><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" style="margin-top:6px">Each marker shows that spot's best score in the next 36 hours. Tap one for details. Zoom in to see every spot's name.</p></div>
+    <div id="spotsList" style="display:flex;flex-direction:column;gap:16px"></div>
+  </section>
 
 
   <section id="tab-find" hidden>
@@ -802,16 +818,41 @@ const stepBy=d=>{const base=Math.floor(pacNow()/H)*H,v=Math.max(0,(selT==null?0:
 $("stepBack").addEventListener("click",()=>stepBy(-1));$("stepFwd").addEventListener("click",()=>stepBy(1));
 $("backNow").addEventListener("click",()=>setTime(null));
 
+/* ============================== MAP VIEW ============================== */
+/* Leaflet (bundled in vendor/) with OpenStreetMap tiles; loaded only when the map is first opened. */
+let spotRows=[],mapOn=false,map=null,mapLayer=null,mapWide=false,leafP=null;
+function loadLeaflet(){return leafP||(leafP=new Promise((res,rej)=>{const l=document.createElement("link");l.rel="stylesheet";l.href="vendor/leaflet/leaflet.css";document.head.appendChild(l);
+  const sc=document.createElement("script");sc.src="vendor/leaflet/leaflet.js";sc.onload=res;sc.onerror=()=>{leafP=null;rej(new Error("map"))};document.head.appendChild(sc)}))}
+function mapBounds(){const all=allSites(),fv=all.filter(s=>favs.has(s.id)),set=mapWide||!fv.length?all:fv;
+  return L.latLngBounds(set.map(s=>[s.lat,s.lon])).pad(mapWide?.12:.22)}
+function drawMap(){
+  if(!map||!window.L)return;const now=pacNow();mapLayer.clearLayers();
+  spotRows.forEach(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?"n":grade(sc).c[0],fav=favs.has(s.id);
+    const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",iconSize:[0,0],html:'<div class="mk'+(fav?" favm":"")+'"><b class="'+g+'">'+(sc==null?"–":sc)+"</b><span>"+(fav?"★ ":"")+esc(s.short||s.name)+"</span></div>"}),zIndexOffset:(fav?2000:0)+(sc||0)*10,keyboard:true,title:s.name});
+    m.bindPopup("<h3>"+esc(s.name)+"</h3>"+(w?"<div><b>"+w.score+" "+grade(w.score).w+"</b> · "+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</div>":ok?"<div>No good window in the next 36 hours"+(c?" · right now "+c.score:"")+"</div>":"")+(s.advisory?'<div style="color:#b3261e;font-weight:600;margin-top:4px">Closed by health order. Check CDFW.</div>':"")+'<button class="btn small" type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+">See the full report</button>",{maxWidth:250,offset:[0,-34]});
+    m.addTo(mapLayer)});
+}
+async function showMap(on){
+  mapOn=on;$("mapToggle").textContent=on?"List view":"Map view";$("spotsMapBox").hidden=!on;$("spotsList").hidden=on;$("mapZoom").hidden=!on;
+  if(!on)return;
+  try{await loadLeaflet()}catch(e){toast("Couldn't load the map. Check your connection.");showMap(false);return}
+  if(!map){map=L.map("spotsMap",{zoomControl:true,attributionControl:true,scrollWheelZoom:true});
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
+    mapLayer=L.layerGroup().addTo(map);map.attributionControl.setPrefix(false);
+    const nm=()=>$("spotsMap").classList.toggle("names",map.getZoom()>=13);map.on("zoomend",nm);map.fitBounds(mapBounds(),{maxZoom:13});nm()}
+  map.invalidateSize();drawMap();
+}
+$("mapToggle").addEventListener("click",()=>showMap(!mapOn));
+$("mapZoom").addEventListener("click",()=>{mapWide=!mapWide;$("mapZoom").textContent=mapWide?"Near favorites":"Whole coast";if(map)map.fitBounds(mapBounds(),{maxZoom:13})});
+
 /* ============================== RENDER: SPOTS ============================== */
 function renderSpots(){
-  const el=$("tab-spots"),now=pacNow(),ready=!!DATA.loadedAt;
+  const el=$("spotsList"),now=pacNow(),ready=!!DATA.loadedAt;
   const missing=ready?custom.filter(s=>!hasData(s)):[];if(missing.length)loadCustom(missing).then(()=>{if(!$("tab-spots").hidden)renderSpots()},()=>{});
   const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w,ok}});
   rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||((b.w?b.w.score:b.c?b.c.score:0)-(a.w?a.w.score:a.c?a.c.score:0)));
-  const bet=ready?rows.filter(r=>!favs.has(r.s.id)&&r.w&&!r.s.custom&&!r.s.advisory).sort((a,b)=>b.w.score-a.w.score)[0]:null;
-  const favBest=ready?Math.max(0,...rows.filter(r=>favs.has(r.s.id)&&r.w).map(r=>r.w.score)):0;
+  spotRows=rows;if(mapOn)drawMap();
   let h="";
-  if(bet&&bet.w.score>=55)h+='<div class="bet"><div class="lbl" style="color:inherit">Somewhere new to try</div><h2>'+esc(bet.s.name)+"</h2><p>Scores "+bet.w.score+" "+dayLong(bet.w.t,now)+" around "+fmtTime(bet.w.t)+(bet.w.score>favBest+4?", better than your favorites ("+favBest+")":"")+". "+esc(bet.s.blurb||"")+'</p><button class="btn" type="button" data-go="'+bet.s.id+'" data-at="'+bet.w.t+'">See the full report</button></div>';
   h+='<p class="fine">Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm. Tap a name for the full report.</p>';
   h+=rows.map(({s,c,w,ok})=>{const sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
     return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?dayShort(w.t,now)+" "+fmtTime(w.t).replace(" ","").toUpperCase():"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'">'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
@@ -1070,7 +1111,7 @@ function drawCrab(x,y,ph,hiding,day){
 function showTab(name){["today","spots","find","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
   curTab=name;$("picker").hidden=name!=="today"&&name!=="spots";renderPicker();
-  if(name==="spots")renderSpots();if(name==="find")syncFind();if(name==="rules")renderRules()}
+  if(name==="spots"){renderSpots();if(mapOn&&map)setTimeout(()=>map.invalidateSize(),0)}if(name==="find")syncFind();if(name==="rules")renderRules()}
 document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){showTab(b.dataset.tab);window.scrollTo(0,0)}});
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 let animStarted=false;
