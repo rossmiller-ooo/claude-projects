@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rob's Crab Report</title>
-<meta name="description" content="Shore crabbing forecast and spot guide for the Northern California coast.">
+<meta name="description" content="Shore crabbing forecast and spot guide for the California coast from Fort Bragg to Monterey.">
 <meta name="theme-color" content="#12304a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -258,7 +258,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 <body>
 <header class="mast"><div class="wrap">
   <button class="compass" id="compass" type="button" aria-label="Update the forecast" title="Update the forecast">  <svg class="rose" width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#c8573a"/></svg></button>
-  <div><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Northern California</div></div>
+  <div><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Fort Bragg to Monterey</div></div>
 </div></header>
 
 <main class="wrap">
@@ -368,7 +368,6 @@ window.addEventListener("error",function(e){var el=document.getElementById("stat
    fresh: how much rain runoff hurts the spot (bays and river mouths)
    current: how hard the tide runs there (bay mouths and channels rip) */
 //SITES-BEGIN
-const DA_NOTE="Closed to Dungeness by a domoic acid health order as of early November 2026. Check CDFW's in-season page before driving up.";
 const SITES=[
  {id:"lawsons",fav:true,name:"Lawson's Landing",short:"Lawson's Landing",region:"Dillon Beach",kind:"Bay mouth · sand beach",lat:38.2310,lon:-122.9675,sea:{lat:38.24,lon:-123.02},station:"9415469",exposure:.35,fresh:.5,current:1.25,gear:["snare"],dayOnly:true,
   blurb:"Cast snares from the sand into the channel at the mouth of Tomales Bay. The current here is fierce on big tides, so the slack windows matter more than anywhere else.",
@@ -419,23 +418,30 @@ const SITES=[
  {id:"noyo",name:"Noyo Harbor Jetty",short:"Noyo Harbor",region:"Fort Bragg",kind:"River mouth · jetty & beach",lat:39.4280,lon:-123.8080,sea:{lat:39.43,lon:-123.84},station:"9417426",exposure:.4,fresh:.6,current:1,gear:["hoop","snare"],
   blurb:"Noyo River mouth in Fort Bragg. Fish the jetty and the beach beside it. Open this season, though the domoic acid closure line sits only a few miles north.",
   tips:["Fish the incoming tide as clean ocean water pushes into the river mouth.","Heavy rain turns the river brown and pushes crab out."]},
- {id:"eureka",name:"Eureka · Del Norte Street Pier",short:"Eureka Pier",region:"Humboldt Bay",kind:"Bay · public pier",lat:40.7890,lon:-124.1850,sea:{lat:40.77,lon:-124.28},station:"9418767",exposure:.03,fresh:.5,current:.9,gear:["hoop"],advisory:DA_NOTE,
-  blurb:"License-free public pier on Humboldt Bay and a local favorite for crab rings."},
- {id:"trinidad",name:"Trinidad Pier",short:"Trinidad Pier",region:"Humboldt coast",kind:"Ocean cove · pier",lat:41.0560,lon:-124.1470,sea:{lat:41.04,lon:-124.17},station:"9418767",exposure:.35,fresh:0,current:.4,gear:["hoop"],advisory:DA_NOTE,
-  blurb:"A sheltered cove pier under Trinidad Head. A fishing license is required here."},
- {id:"crescent",name:"Crescent City · B Street Pier",short:"Crescent City",region:"Del Norte coast",kind:"Harbor · public pier",lat:41.7440,lon:-124.1960,sea:{lat:41.72,lon:-124.22},station:"9419750",exposure:.3,fresh:.15,current:.5,gear:["hoop"],
-  blurb:"The far-north option: a long public pier in Crescent City harbor with a reputation for year-round crab. Open this season, license-free, and open to July 30.",
-  tips:["Pier regulars report it fishes better toward low tide, the reverse of most spots.","The North Jetty nearby is also heavily crabbed."],link:["Pier report","https://www.pierfishing.com/b-street-pier-aka-michael-j-scavuzzo-pier-crescent-city/3/"]}
+ {id:"hmbbeach",name:"Half Moon Bay State Beach",short:"Half Moon Bay Beach",region:"Half Moon Bay",kind:"Open surf beach",lat:37.4667,lon:-122.4450,sea:{lat:37.46,lon:-122.49},station:"9414131",exposure:.9,fresh:0,current:.6,gear:["snare"],dayOnly:true,
+  blurb:"Long sandy beach south of the harbor. Dungeness run close to shore on this stretch of coast, so it suits surf snaring when the swell is small.",
+  tips:["Needs a small swell day.","Cast past the breakers on the incoming tide."],access:"State beach parking fee at Francis Beach. Day use."},
+ {id:"scwharf",name:"Santa Cruz Wharf",short:"Santa Cruz Wharf",region:"Santa Cruz",kind:"Ocean pier",lat:36.9573,lon:-122.0178,sea:{lat:36.93,lon:-122.02},station:"9413745",exposure:.35,fresh:.1,current:.4,gear:["hoop","snare"],
+  blurb:"Half a mile of public wharf, sheltered from northwest swell, with crabbing allowed all year and no license needed. Expect mostly rock crab; Dungeness show up in winter but are not the norm this far south.",
+  tips:["Two hoop nets or rods per person on a public pier.","Drop nets toward the outer end, where the water is deepest.","Sea lions under the wharf will rob loose bait. Use a bait cage."]},
+ {id:"capitola",name:"Capitola Wharf",short:"Capitola Wharf",region:"Santa Cruz",kind:"Ocean pier",lat:36.9703,lon:-121.9535,sea:{lat:36.95,lon:-121.95},station:"9413745",exposure:.35,fresh:.2,current:.4,gear:["hoop","snare"],
+  blurb:"A smaller, quieter public wharf in a sheltered corner of Monterey Bay. Good rock crabbing, with the odd Dungeness in winter.",
+  tips:["No license needed on the wharf.","Soquel Creek muddies the water after heavy rain."]},
+ {id:"moss",name:"Moss Landing Jetty",short:"Moss Landing",region:"Monterey Bay",kind:"Harbor mouth · jetty & beach",lat:36.8085,lon:-121.7885,sea:{lat:36.80,lon:-121.82},station:"9413616",exposure:.5,fresh:.4,current:1.1,gear:["snare","hoop"],
+  blurb:"Harbor mouth at the head of the Monterey submarine canyon, where deep water comes unusually close to shore. Most Monterey Bay Dungeness are taken deep by boats, so treat this as a long shot worth a try rather than a sure thing.",
+  tips:["Strong current through the harbor mouth. Fish near slack.","A fishing license is required on the jetties and beach."],access:"Moss Landing State Beach, off Jetty Road. Parking fee."},
+ {id:"monterey",name:"Monterey Municipal Wharf No. 2",short:"Monterey Wharf 2",region:"Monterey",kind:"Harbor · public pier",lat:36.6045,lon:-121.8895,sea:{lat:36.62,lon:-121.88},station:"9413450",exposure:.2,fresh:0,current:.3,gear:["hoop"],
+  blurb:"The working commercial wharf, open to the public and well sheltered. A calm, easy place to drop hoop nets without a license. Rock crab is the usual catch; Dungeness are uncommon here."}
 ];
 const RULES={lineLat:38.77,size:"5¾ inches",bait:"squid is the snare favorite. Add an oily fish (sardine, anchovy, mackerel) or chicken for hoop nets.",notices:[],
  asOf:"Summarized from California Department of Fish and Wildlife rules and notices as of November 14, 2026. Closures and health advisories change during the season, so check the links below before a trip.",
  hotline:"By phone: CDFW domoic acid fishery line (831) 649-2883 · CDPH shellfish information line (800) 553-4133.",
  items:[
   ["This season (2026–27)","Opened November 7, 2026. <b>Crab traps are banned</b> for sport crabbers from the Oregon border to Point Conception until at least January 1, 2027, to protect humpback whales. <b>Snares and hoop nets are still legal</b>, so Rob's gear is fine."],
-  ["Domoic acid closures","As of early November 2026, Dungeness is closed by health order on the Humboldt coast (Reading Rock south to Cape Mendocino, including Trinidad and Eureka) and from Cape Mendocino to Ten Mile north of Fort Bragg (including Shelter Cove). Bodega Bay, Lawson's and everything south of Ten Mile are open, as is Crescent City."],
+  ["Domoic acid closures","As of early November 2026, Dungeness is closed by health order north of the Ten Mile area above Fort Bragg. Every spot in this app is south of that line and open, but Noyo Harbor sits only a few miles below it, so check before driving there."],
   ["Limit","10 Dungeness per person per day."],
   ["Size","5¾ inches minimum, measured straight across the shell just in front of the points (the points don't count). Measure before it goes in the bucket."],
-  ["Season","First Saturday of November through June 30 from Sonoma County south. Through July 30 in Mendocino, Humboldt and Del Norte."],
+  ["Season","First Saturday of November through June 30 from Sonoma County south. Through July 30 in Mendocino County (Point Arena and Fort Bragg)."],
   ["Hoop nets","Must be raised and checked at least every 2 hours. From shore or a pier they don't need a buoy."],
   ["Crab snares","Up to six loops on a snare."],
   ["Public piers","No fishing license needed, but only two rods or nets per person (two hoop nets, two rods, or one of each). Size and bag limits still apply."],
@@ -446,6 +452,7 @@ const RULES={lineLat:38.77,size:"5¾ inches",bait:"squid is the snare favorite. 
  links:[["CDFW in-season closures","https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason"],["CDFW crab rules","https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs/Crab"],["Whale-safe gear status","https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries"],["Domoic acid advisories","https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram/DomoicAcid.aspx"],["Lawson's Landing report","https://fishlawsons.blogspot.com/"],["Shore snare reports","https://www.fishsniffer.com/durasnare"],["NorCal Fish Reports","https://www.norcalfishreports.com"],["Pier Fishing in California","https://www.pierfishing.com"]]};
 
 const STATIONS=[
+ {id:"9413450",n:"Monterey",lat:36.6089,lon:-121.8914},{id:"9413616",n:"Moss Landing",lat:36.8017,lon:-121.79},{id:"9413745",n:"Santa Cruz",lat:36.9583,lon:-122.017},
  {id:"9414131",n:"Pillar Point Harbor",lat:37.5025,lon:-122.4822},{id:"9414275",n:"Ocean Beach",lat:37.775,lon:-122.513},
  {id:"9414290",n:"San Francisco",lat:37.8063,lon:-122.4659},{id:"9415020",n:"Point Reyes",lat:37.9942,lon:-122.9736},
  {id:"9415469",n:"Tomales Bay entrance",lat:38.2283,lon:-122.977},{id:"9415396",n:"Blake's Landing, Tomales Bay",lat:38.19,lon:-122.917},
