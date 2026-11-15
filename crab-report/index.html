@@ -226,6 +226,9 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .mapprev:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .mapprev .leaflet-control-attribution{font-size:9px}
 #spotsMap{height:min(68vh,560px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--water);z-index:0}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.shopmk{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:#fbfcfa;border:2px solid #1f5f80;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+.shopmk svg{width:18px;height:18px;display:block}
 .mk{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;white-space:nowrap;cursor:pointer}
 .mk b{font:700 1.05rem/1 var(--f-data);min-width:34px;text-align:center;padding:5px 7px;border-radius:8px;border:2px solid #12304a;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 .mk b.g{background:#dcefe3;color:#1f7a4d}.mk b.f{background:#f6e7c4;color:#8a5600}.mk b.b{background:#f6d9d5;color:#b3261e}.mk b.n{background:#fbfcfa;color:#4b6577}
@@ -309,7 +312,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
   <section id="tab-spots" hidden>
     <div class="modefab" id="mapMode" role="group" aria-label="Scores to show"><button type="button" data-m="best" aria-pressed="true">Best (36hrs)</button><button type="button" data-m="now" aria-pressed="false">Now</button></div>
     <div class="mapprev" id="mapPrev" role="button" tabindex="0" aria-label="Open the map view"><div id="prevMap"></div><span class="mapprev-lbl">Map view <span aria-hidden="true">›</span></span></div>
-    <div id="mapBar" hidden style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn primary" type="button" id="mapToggle"><span aria-hidden="true">‹</span> List view</button><button class="btn" type="button" id="mapZoom">Whole coast</button></div>
+    <div id="mapBar" hidden style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" id="mapToggle"><span aria-hidden="true">‹</span> List view</button><button class="btn" type="button" id="shopToggle" aria-pressed="true">Bait shops</button><button class="btn" type="button" id="mapZoom">Whole coast</button></div>
     <div id="spotsMapBox" hidden><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" id="mapNote" style="margin-top:6px"></p></div>
     <div id="spotsList" style="display:flex;flex-direction:column;gap:16px"></div>
   </section>
@@ -467,6 +470,11 @@ const STATIONS=[
  {id:"9419750",n:"Crescent City",lat:41.7456,lon:-124.1844}];
 const FALLBACK_STATION="9415020";
 //SITES-END
+/* Bait and tackle shops shown on the map. Only shops rated 4.0 stars or higher when checked (see SHOPS_ASOF). */
+//SHOPS-BEGIN
+const SHOPS_ASOF="";
+const SHOPS=[];
+//SHOPS-END
 
 /* ============================== STORAGE ============================== */
 const store={get(k,d){try{const v=localStorage.getItem("crab."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
@@ -882,8 +890,19 @@ async function drawPrev(){
   prev.invalidateSize();prev.fitBounds([[38.222,-123.075],[38.335,-122.945]],{paddingTopLeft:[10,46],paddingBottomRight:[10,6]});
   prevLayer.clearLayers();const now=pacNow();spotRows.filter(r=>r.s.id==="lawsons"||r.s.id==="doran").forEach(r=>spotMarker(r,mapMode,now,false).addTo(prevLayer));
 }
+const HOOK='<svg viewBox="0 0 24 24" fill="none" stroke="#1f5f80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14" cy="4.200" r="1.900"/><path d="M14 6.200v9.300a4.500 4.500 0 0 1-9 0v-3.200l3 2.600"/></svg>';
+let shopLayer=null,shopsOn=store.get("shops",true);
+function drawShops(){
+  if(!map||!window.L)return;if(!shopLayer)shopLayer=L.layerGroup();
+  shopLayer.clearLayers();$("shopToggle").setAttribute("aria-pressed",shopsOn);$("shopToggle").hidden=!SHOPS.length;
+  if(!shopsOn){map.removeLayer(shopLayer);return}
+  SHOPS.forEach(h=>{const m=L.marker([h.lat,h.lon],{icon:L.divIcon({className:"",iconSize:[0,0],html:'<div class="shopmk">'+HOOK+"</div>"}),zIndexOffset:-500,title:h.name+" (bait and tackle)"});
+    m.bindPopup("<h3>"+esc(h.name)+'</h3><div style="font:600 .78rem var(--f-data);letter-spacing:.07em;text-transform:uppercase;color:#4b6577">Bait &amp; tackle</div><div><b>★ '+h.rating.toFixed(1)+"</b> on "+esc(h.src)+(h.n?" · "+h.n+" reviews":"")+"</div><div>"+esc(h.addr)+"</div>"+(h.phone?"<div>"+esc(h.phone)+"</div>":"")+(h.note?'<div style="margin-top:4px">'+esc(h.note)+"</div>":"")+'<a class="btn small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(h.name+", "+h.addr)+'">Open in Google Maps</a>',{maxWidth:250,offset:[0,-12]});
+    m.addTo(shopLayer)});
+  shopLayer.addTo(map);
+}
 function drawMap(){
-  $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 36 hours.")+" Tap one for details. Zoom in to see every spot's name.";
+  $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 36 hours.")+" Tap one for details. Zoom in to see every spot's name."+(SHOPS.length?" Hook markers are bait and tackle shops rated 4 stars or higher"+(SHOPS_ASOF?" as of "+SHOPS_ASOF:"")+".":"");
   if(!map||!window.L)return;const now=pacNow();mapLayer.clearLayers();
   spotRows.forEach(r=>spotMarker(r,mapMode,now,true).addTo(mapLayer));
 }
@@ -895,9 +914,10 @@ async function showMap(on){
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
     mapLayer=L.layerGroup().addTo(map);map.attributionControl.setPrefix(false);
     const nm=()=>$("spotsMap").classList.toggle("names",map.getZoom()>=13);map.on("zoomend",nm);map.fitBounds(mapBounds(),{maxZoom:13});nm()}
-  map.invalidateSize();drawMap();
+  map.invalidateSize();drawMap();drawShops();
 }
 $("mapToggle").addEventListener("click",()=>showMap(false));
+$("shopToggle").addEventListener("click",()=>{shopsOn=!shopsOn;store.set("shops",shopsOn);drawShops()});
 $("mapPrev").addEventListener("click",()=>showMap(true));$("mapPrev").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showMap(true)}});
 $("mapMode").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;mapMode=b.dataset.m;$("mapMode").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderSpots()});
 $("mapZoom").addEventListener("click",()=>{mapWide=!mapWide;$("mapZoom").textContent=mapWide?"Near favorites":"Whole coast";if(map)map.fitBounds(mapBounds(),{maxZoom:13})});
