@@ -340,6 +340,20 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 <script>
 "use strict";
 function nz(a,b){return a==null?b:a}
+/* Self-update: home-screen web apps hang on to an old copy of the page. On open and on return, ask the
+   server (bypassing caches) when the page last changed; if that's newer than the copy running, reload once. */
+async function checkUpdate(){
+  try{const r=await fetch(location.pathname,{method:"HEAD",cache:"no-store"});
+    const srv=Date.parse(r.headers.get("last-modified")||""),mine=Date.parse(document.lastModified);
+    if(!srv||!mine||srv-mine<5000)return false;
+    let tried=null;try{tried=sessionStorage.getItem("crab.upd")}catch(e){}
+    if(tried===String(srv))return false;               // already reloaded for this version; don't loop
+    try{sessionStorage.setItem("crab.upd",String(srv))}catch(e){return false}
+    await fetch(location.pathname,{cache:"reload"}).catch(()=>{});   // refresh the cached copy first
+    location.reload();return true}
+  catch(e){return false}
+}
+checkUpdate();
 window.addEventListener("error",function(e){var el=document.getElementById("status");if(el&&!el.hidden){el.className="alert bad";el.innerHTML="<div><b>Something went wrong.</b> <span>The app hit an error on this device: "+String(e.message||"unknown").replace(/</g,"&lt;")+"</span></div>"}});
 /* ============================== SPOT DATA ============================== */
 /* exposure: how much open-ocean swell reaches the water you fish (0 = inner harbor, 1 = open surf)
@@ -1151,7 +1165,7 @@ async function boot(force){
   DATA.loadedAt=pacNow();paint();return true;
 }
 $("compass").addEventListener("click",()=>{const b=$("compass");if(b.classList.contains("spin"))return;b.classList.add("spin");
-  const t0=Date.now();boot(true).then(ok=>{setTimeout(()=>{b.classList.remove("spin");toast(ok?"Forecast reloaded":"Couldn't reach the forecast right now")},Math.max(0,700-(Date.now()-t0)))})});
+  const t0=Date.now();checkUpdate().then(up=>up?false:boot(true)).then(ok=>{setTimeout(()=>{b.classList.remove("spin");toast(ok?"Forecast reloaded":"Couldn't reach the forecast right now")},Math.max(0,700-(Date.now()-t0)))})});
 document.addEventListener("click",e=>{if(e.target.closest("[data-retry]")){setStatus("fair","<span>Trying again…</span>");boot()}});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();boot();
@@ -1159,6 +1173,7 @@ setInterval(()=>{if(!document.hidden&&DATA.loadedAt&&$("tab-today").hidden===fal
 setInterval(()=>{if(selT==null&&DATA.loadedAt&&!$("viewing").hidden)$("viewTxt").textContent="Right now, "+fmtTime(pacNow())},30000);
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(document.hidden){hiddenAt=Date.now();return}
+  checkUpdate();
   if(selT!=null&&hiddenAt&&Date.now()-hiddenAt>30*6e4){selT=null;if(DATA.loadedAt)renderToday()}
   if(DATA.loadedAt&&pacNow()-DATA.loadedAt>30*6e4)boot()});
 </script>
