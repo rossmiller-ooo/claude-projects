@@ -269,7 +269,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
         <div class="legend"><span><i style="background:var(--ink)"></i>Tide height (ft, MLLW)</span><span><i style="background:var(--good-bg);border:1px solid var(--good)"></i>Good crabbing window</span><span><i style="background:var(--line)"></i>Night</span></div>
       </div>
 
-      <div class="card"><h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>Best times to go <span class="lbl" style="font-size:.85rem;white-space:nowrap">(next 72 hrs)</span></span><button class="btn small" type="button" data-tabgo="find">Find a time</button></h2><div class="windows" id="windows"></div>
+      <div class="card"><h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>Best times to go <span class="lbl" style="font-size:.85rem;white-space:nowrap">(next 72 hrs)</span></span><button class="btn small" type="button" data-tabgo="find">Plan a time</button></h2><div class="windows" id="windows"></div>
         <div class="lbl" style="margin:14px 0 8px">Next ten days — best score each day</div><div class="days" id="days"></div><p class="fine" style="margin-top:8px">Tap a time or day to switch the whole page to that hour. Swell and wind forecasts past five days are rough guides; the tides are exact.</p></div>
 
       <div class="card"><h2>What to bring <span class="lbl" id="gearWhen" style="font-size:.85rem"></span></h2><div class="gear" id="gear"></div></div>
@@ -282,8 +282,8 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 
 
   <section id="tab-find" hidden>
-    <div class="card"><h2>Find a time</h2>
-      <p class="fine" style="margin-bottom:14px">Pick what matters to you. Leave a row empty if you don't mind.</p>
+    <div class="card"><h2>Plan a time</h2>
+      <p class="fine" style="margin-bottom:14px">Pick what suits you and get the best times to go in the next ten days. Leave a row empty if you don't mind.</p>
       <div class="lbl" id="fTod">Time of day</div>
       <div class="opts" data-group="tod" data-multi role="group" aria-labelledby="fTod">
         <button class="chip" type="button" data-v="morning">Morning<small>5–10 am</small></button><button class="chip" type="button" data-v="midday">Midday<small>10 am–3 pm</small></button><button class="chip" type="button" data-v="evening">Evening<small>3–8 pm</small></button><button class="chip" type="button" data-v="night">Night<small>after 8 pm</small></button></div>
@@ -300,7 +300,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
       <div class="lbl" id="fSpots">Where</div>
       <div class="opts" data-group="spots" role="group" aria-labelledby="fSpots">
         <button class="chip" type="button" data-v="fav">My favorites</button><button class="chip" type="button" data-v="all">All spots</button></div>
-      <div class="find-go"><button class="btn primary" type="button" id="findGo">Find times</button><button class="btn small" type="button" id="findClear">Clear choices</button></div>
+      <div class="find-go"><button class="btn primary" type="button" id="findGo">Show best times</button><button class="btn small" type="button" id="findClear">Clear choices</button></div>
     </div>
     <div id="findOut" style="display:flex;flex-direction:column;gap:8px"></div>
   </section>
@@ -311,7 +311,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 <nav class="tabs" aria-label="Sections"><div role="tablist">
   <button role="tab" data-tab="today" aria-selected="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 21c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/><circle cx="12" cy="7" r="3.5"/></svg>Today</button>
   <button role="tab" data-tab="spots" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7 7-12a7 7 0 10-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>Spots</button>
-  <button role="tab" data-tab="find" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M11 7v4l2.5 2M16.5 16.5L21 21"/></svg>Find</button>
+  <button role="tab" data-tab="find" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>Plan</button>
   <button role="tab" data-tab="rules" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 7v10h16V7M8 7v4M12 7v6M16 7v4"/></svg>Rules</button>
 </div></nav>
 <div class="toast" id="toast" hidden></div>
@@ -824,7 +824,7 @@ function renderSpots(){
 }
 
 
-/* ============================== FIND A TIME ============================== */
+/* ============================== PLAN A TIME ============================== */
 /* Simple preference chips, then a search of every hour in the forecast across the chosen spots. */
 const FIND_DEF={tod:[],days:"any",from:null,to:null,cond:[],gear:"any",spots:"fav"};
 let findPrefs=Object.assign(JSON.parse(JSON.stringify(FIND_DEF)),store.get("find",{}));
@@ -873,12 +873,12 @@ function findSearch(P){
 function runFind(){
   const P=findPrefs,now=pacNow(),res=findSearch(P),el=$("findOut");
   if(!DATA.loadedAt){el.innerHTML='<p class="empty">The forecast is still loading. Try again in a moment.</p>';return}
-  if(!res.sites.length){el.innerHTML='<div class="alert fair"><div><b>No spots to search.</b> <span>'+(P.gear!=="any"&&P.spots==="fav"?"None of your favorites suit that gear. Try All spots.":"Star a favorite on the Spots tab, or choose All spots.")+"</span></div></div>";return}
+  if(!res.sites.length){el.innerHTML='<div class="alert fair"><div><b>No spots to plan around.</b> <span>'+(P.gear!=="any"&&P.spots==="fav"?"None of your favorites suit that gear. Try All spots.":"Star a favorite on the Spots tab, or choose All spots.")+"</span></div></div>";return}
   if(!res.top.length){
     // say which single choice is in the way
     const tries=[];P.cond.forEach(c=>tries.push([FIND_LBL[c],Object.assign({},P,{cond:P.cond.filter(x=>x!==c)})]));
     if(P.tod.length)tries.push(["the time of day",Object.assign({},P,{tod:[]})]);if(P.days!=="any")tries.push([P.days==="custom"?"the custom dates":"the "+P.days+" limit",Object.assign({},P,{days:"any"})]);
-    if(P.gear!=="any")tries.push(["the gear choice",Object.assign({},P,{gear:"any"})]);if(P.spots==="fav")tries.push(["favorites only (search All spots)",Object.assign({},P,{spots:"all"})]);
+    if(P.gear!=="any")tries.push(["the gear choice",Object.assign({},P,{gear:"any"})]);if(P.spots==="fav")tries.push(["favorites only (try All spots)",Object.assign({},P,{spots:"all"})]);
     const hints=tries.map(([l,q])=>[l,findSearch(q).total]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,2);
     el.innerHTML='<div class="alert fair"><div><b>Nothing matches in the next ten days.</b> <span>'+(hints.length?"Dropping "+hints.map(h=>"<b style=\"font:inherit;font-weight:700;text-transform:none;letter-spacing:0\">"+esc(h[0])+"</b> would turn up "+h[1]+(h[1]===1?" time":" times")).join(", or dropping ")+".":"Conditions are rough across the board. Try fewer choices.")+"</span></div></div>";return}
   el.innerHTML='<div class="lbl" style="margin-top:4px">Best '+res.top.length+(res.top.length===1?" match":" matches")+" · "+res.sites.length+(res.sites.length===1?" spot":" spots")+" · tap one for the full report</div>"+res.top.map(r=>{const c=r.best,g=grade(c.score),td=c.tide;
