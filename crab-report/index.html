@@ -307,7 +307,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
   </section>
 
   <section id="tab-spots" hidden>
-    <div class="modefab" id="mapMode" role="group" aria-label="Scores to show"><button type="button" data-m="best" aria-pressed="true">Best 36 hrs</button><button type="button" data-m="now" aria-pressed="false">Right now</button></div>
+    <div class="modefab" id="mapMode" role="group" aria-label="Scores to show"><button type="button" data-m="best" aria-pressed="true">Best 72 hrs</button><button type="button" data-m="now" aria-pressed="false">Right now</button></div>
     <div class="mapprev" id="mapPrev" role="button" tabindex="0" aria-label="Open the map view"><div id="prevMap"></div><span class="mapprev-lbl">Map view <span aria-hidden="true">›</span></span></div>
     <div id="mapBar" hidden style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn primary" type="button" id="mapToggle"><span aria-hidden="true">‹</span> List view</button><button class="btn" type="button" id="mapZoom">Whole coast</button></div>
     <div id="spotsMapBox" hidden><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" id="mapNote" style="margin-top:6px"></p></div>
@@ -870,7 +870,7 @@ function mapBounds(){const all=allSites(),fv=all.filter(s=>favs.has(s.id)),set=m
   return L.latLngBounds(set.map(s=>[s.lat,s.lon])).pad(mapWide?.12:.22)}
 function spotMarker(row,mode,now,popup){const {s,c,w:wBest,ok}=row,w=mode==="now"?null:wBest,sc=w?w.score:c?c.score:null,g=sc==null?"n":grade(sc).c[0],fav=favs.has(s.id);
   const m=L.marker([s.lat,s.lon],{interactive:popup,icon:L.divIcon({className:"",iconSize:[0,0],html:'<div class="mk'+(fav?" favm":"")+'"><b class="'+g+'">'+(sc==null?"–":sc)+"</b><span>"+(fav?"★ ":"")+esc(s.short||s.name)+"</span></div>"}),zIndexOffset:(fav?2000:0)+(sc||0)*10,keyboard:popup,title:s.name});
-  if(popup)m.bindPopup("<h3>"+esc(s.name)+"</h3>"+(w?"<div><b>"+w.score+" "+grade(w.score).w+"</b> · "+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</div>":mode==="now"&&c?"<div><b>"+c.score+" "+grade(c.score).w+"</b> · right now"+(wBest?"<br>Best in 36 hrs: "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</div>":ok?"<div>No good window in the next 36 hours"+(c?" · right now "+c.score:"")+"</div>":"")+(s.advisory?'<div style="color:#b3261e;font-weight:600;margin-top:4px">Closed by health order. Check CDFW.</div>':"")+'<button class="btn small" type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+">See the full report</button>",{maxWidth:250,offset:[0,-34]});
+  if(popup)m.bindPopup("<h3>"+esc(s.name)+"</h3>"+(w?"<div><b>"+w.score+" "+grade(w.score).w+"</b> · "+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</div>":mode==="now"&&c?"<div><b>"+c.score+" "+grade(c.score).w+"</b> · right now"+(wBest?"<br>Best in 72 hrs: "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</div>":ok?"<div>No good window in the next 72 hours"+(c?" · right now "+c.score:"")+"</div>":"")+(s.advisory?'<div style="color:#b3261e;font-weight:600;margin-top:4px">Closed by health order. Check CDFW.</div>':"")+'<button class="btn small" type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+">See the full report</button>",{maxWidth:250,offset:[0,-34]});
   return m}
 /* Preview on the Spots tab: a still map of the Bodega Harbor to Dillon Beach stretch. Tap it to open the full map. */
 let prev=null,prevLayer=null;
@@ -883,7 +883,7 @@ async function drawPrev(){
   prevLayer.clearLayers();const now=pacNow();spotRows.filter(r=>r.s.id==="lawsons"||r.s.id==="doran").forEach(r=>spotMarker(r,mapMode,now,false).addTo(prevLayer));
 }
 function drawMap(){
-  $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 36 hours.")+" Tap one for details. Zoom in to see every spot's name.";
+  $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 72 hours.")+" Tap one for details. Zoom in to see every spot's name.";
   if(!map||!window.L)return;const now=pacNow();mapLayer.clearLayers();
   spotRows.forEach(r=>spotMarker(r,mapMode,now,true).addTo(mapLayer));
 }
@@ -906,15 +906,15 @@ $("mapZoom").addEventListener("click",()=>{mapWide=!mapWide;$("mapZoom").textCon
 function renderSpots(){
   const el=$("spotsList"),now=pacNow(),ready=!!DATA.loadedAt;
   const missing=ready?custom.filter(s=>!hasData(s)):[];if(missing.length)loadCustom(missing).then(()=>{if(!$("tab-spots").hidden)renderSpots()},()=>{});
-  const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,36,1)[0]:null;return{s,c,w,ok}});
+  const rows=allSites().map(s=>{const ok=ready&&hasData(s);const c=ok?cond(s,now):null;const w=ok?bestWindows(s,now,72,1)[0]:null;return{s,c,w,ok}});
   const nowMode=mapMode==="now",val=r=>nowMode?(r.c?r.c.score:0):(r.w?r.w.score:r.c?r.c.score:0);
   rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||(val(b)-val(a)));
   spotRows=rows;if(mapOn)drawMap();else drawPrev();
   let h="";
-  h+='<p class="fine">'+(nowMode?"Each score is for that spot right now.":"Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm.")+" Tap a name for the full report.</p>";
+  h+='<p class="fine">'+(nowMode?"Each score is for that spot right now.":"Each score is that spot\'s best window in the next 72 hours, between 5 am and 10 pm.")+" Tap a name for the full report.</p>";
   h+=rows.map(({s,c,w:wBest,ok})=>{const w=nowMode?null:wBest,sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
     return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?dayShort(w.t,now)+" "+fmtTime(w.t).replace(" ","").toUpperCase():"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+'>'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
-      (w?'<p class="blurb"><b>Best time: '+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</b>"+(c?" · right now "+c.score:"")+"</p>":nowMode&&c?'<p class="blurb"><b>Right now: '+grade(c.score).w+"</b>"+(wBest?" · best in 36 hrs "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</p>":ok?'<p class="blurb"><b>No good window in the next 36 hours</b>'+(c?" · right now "+c.score:"")+"</p>":"")+
+      (w?'<p class="blurb"><b>Best time: '+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</b>"+(c?" · right now "+c.score:"")+"</p>":nowMode&&c?'<p class="blurb"><b>Right now: '+grade(c.score).w+"</b>"+(wBest?" · best in 72 hrs "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</p>":ok?'<p class="blurb"><b>No good window in the next 72 hours</b>'+(c?" · right now "+c.score:"")+"</p>":"")+
       (s.blurb?'<p class="blurb" style="margin-top:4px">'+esc(s.blurb)+"</p>":"")+
       (s.buzz?'<p class="fine" style="margin-top:4px">'+esc(s.buzz)+"</p>":"")+(s.advisory?'<p class="fine t-bad" style="margin-top:4px;font-weight:600">'+esc(s.advisory)+"</p>":"")+
       '<div class="btns">'+mapLinks(s,true)+(s.custom?'<button class="btn small" type="button" data-rmspot="'+s.id+'">Remove</button>':"")+"</div></div>"+starBtn(s)+"</div>"}).join("");
