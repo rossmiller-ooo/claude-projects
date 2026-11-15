@@ -197,23 +197,13 @@ form.f label{display:flex;flex-direction:column;gap:4px;min-width:0}
 form.f .wide{grid-column:1/-1}
 input,select,textarea{background:var(--water);border:1.5px solid var(--line);border-radius:8px;padding:10px;width:100%;min-width:0}
 textarea{min-height:70px;resize:vertical}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
-.entry{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:start;padding:12px 0;border-top:1.5px solid var(--line)}
-.entry:first-child{border-top:0}
-.entry .k{font:700 1.8rem/1 var(--f-data);text-align:center}
-.entry .k small{display:block;font-size:.65rem;letter-spacing:.08em;color:var(--ink2);margin-top:3px}
-.entry .n{font-size:.92rem;color:var(--ink2)}
-.del{all:unset;cursor:pointer;color:var(--ink2);font-size:.85rem;text-decoration:underline}
-table.t{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-table.t th{text-align:left;font:600 .78rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
-table.t th,table.t td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line)}
 .rules dt{font-weight:700;margin-top:12px} .rules dd{margin:2px 0 0}
 .fine{font-size:.85rem;color:var(--ink2)}
 .empty{color:var(--ink2);font-style:italic}
 
 /* tab bar */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--deep);z-index:20;padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs div{max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs div{max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
 nav.tabs button{all:unset;cursor:pointer;text-align:center;color:var(--deep-ink);opacity:.65;padding:9px 0 8px;font:600 .82rem var(--f-data);letter-spacing:.09em;text-transform:uppercase}
 nav.tabs button svg{display:block;margin:0 auto 3px}
 nav.tabs button[aria-selected="true"]{opacity:1;box-shadow:inset 0 3px 0 var(--land)}
@@ -272,28 +262,6 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 
   <section id="tab-spots" hidden></section>
 
-  <section id="tab-log" hidden>
-    <div class="card"><h2>Log a catch</h2>
-      <form class="f" id="logForm">
-        <label><span class="lbl">When</span><input type="datetime-local" id="lWhen" required></label>
-        <label><span class="lbl">Spot</span><select id="lSpot"></select></label>
-        <label><span class="lbl">Gear</span><select id="lGear"><option>Rod &amp; snare</option><option>Hoop net</option><option>Both</option></select></label>
-        <label><span class="lbl">Keepers</span><input type="number" id="lKeep" min="0" max="10" inputmode="numeric" value="0" required></label>
-        <label><span class="lbl">Thrown back</span><input type="number" id="lRel" min="0" inputmode="numeric" value="0"></label>
-        <label><span class="lbl">Biggest (inches)</span><input type="number" id="lBig" min="0" max="12" step="0.25" inputmode="decimal" placeholder="6.5"></label>
-        <label><span class="lbl">Bait</span><input type="text" id="lBait" placeholder="Squid, chicken, mackerel…"></label>
-        <label><span class="lbl">Hours fished</span><input type="number" id="lHrs" min="0" step="0.5" inputmode="decimal" placeholder="3"></label>
-        <label class="wide"><span class="lbl">Notes</span><textarea id="lNotes" placeholder="Where exactly, what worked, who came along…"></textarea></label>
-        <div class="wide btns"><button class="btn primary" type="submit">Save to log</button><span class="fine" id="logHint" style="align-self:center">Conditions at that time are saved with the entry automatically.</span></div>
-      </form>
-    </div>
-    <div class="stats" id="logStats"></div>
-    <div class="card" id="logPatterns" hidden></div>
-    <div class="card"><h2>Logbook</h2><div id="logList"></div>
-      <div class="btns" style="margin-top:14px"><button class="btn small" id="expCsv" type="button">Download spreadsheet (CSV)</button><button class="btn small" id="expJson" type="button">Back up log</button><label class="btn small" style="cursor:pointer">Restore backup<input type="file" id="impJson" accept="application/json,.json" hidden></label></div>
-      <p class="fine" style="margin-top:8px">The log is stored on this device only. Back it up now and then, or before switching phones.</p>
-    </div>
-  </section>
 
   <section id="tab-rules" hidden></section>
 </main>
@@ -301,7 +269,6 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 <nav class="tabs" aria-label="Sections"><div role="tablist">
   <button role="tab" data-tab="today" aria-selected="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 21c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/><circle cx="12" cy="7" r="3.5"/></svg>Today</button>
   <button role="tab" data-tab="spots" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7 7-12a7 7 0 10-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>Spots</button>
-  <button role="tab" data-tab="log" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h12a2 2 0 012 2v16H7a2 2 0 01-2-2zM9 8h6M9 12h6M9 16h3"/></svg>Log</button>
   <button role="tab" data-tab="rules" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 7v10h16V7M8 7v4M12 7v6M16 7v4"/></svg>Rules</button>
 </div></nav>
 <div class="toast" id="toast" hidden></div>
@@ -408,7 +375,6 @@ const store={get(k,d){try{const v=localStorage.getItem("crab."+k);return v==null
              set(k,v){try{localStorage.setItem("crab."+k,JSON.stringify(v))}catch(e){}}};
 let favs=new Set(store.get("favs",null)||SITES.filter(s=>s.fav).map(s=>s.id));
 let custom=store.get("custom",[]);
-let log=store.get("log",[]);
 let current=store.get("current",null);
 const allSites=()=>SITES.concat(custom);
 const siteById=id=>allSites().find(s=>s.id===id);
@@ -723,12 +689,11 @@ function renderSpotCard(site){
   $("spotCard").innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h2>'+esc(site.name)+'</h2><div class="lbl">'+esc(site.kind||"")+(site.region?" · "+esc(site.region):"")+"</div></div>"+starBtn(site)+"</div>"+
     (site.blurb?'<p style="margin-top:8px">'+esc(site.blurb)+"</p>":"")+(site.tips&&site.tips.length?'<ul class="tips">'+site.tips.map(t=>"<li>"+esc(t)+"</li>").join("")+"</ul>":"")+
     (site.access?'<p class="fine" style="margin-top:8px">'+esc(site.access)+"</p>":"")+(site.buzz?'<p class="fine" style="margin-top:6px">'+esc(site.buzz)+"</p>":"")+
-    '<div class="btns" style="margin-top:12px"><button class="btn primary" type="button" data-log="'+site.id+'">Log a catch here</button>'+mapLinks(site)+(site.link?'<a class="btn" target="_blank" rel="noopener" href="'+site.link[1]+'">'+esc(site.link[0])+"</a>":"")+"</div>";
+    '<div class="btns" style="margin-top:12px">'+mapLinks(site)+(site.link?'<a class="btn" target="_blank" rel="noopener" href="'+site.link[1]+'">'+esc(site.link[0])+"</a>":"")+"</div>";
 }
 const starBtn=s=>'<button class="star" type="button" data-star="'+s.id+'" aria-pressed="'+favs.has(s.id)+'" aria-label="'+(favs.has(s.id)?"Remove from":"Add to")+' favorites" title="Favorite">'+(favs.has(s.id)?"★":"☆")+"</button>";
 document.addEventListener("click",e=>{
   const st=e.target.closest("[data-star]");if(st){const id=st.dataset.star;favs.has(id)?favs.delete(id):favs.add(id);store.set("favs",[...favs]);renderPicker();renderSpots();if(DATA.loadedAt)renderSpotCard(siteById(current));toast(favs.has(id)?"Added to favorites":"Removed from favorites");return}
-  const lg=e.target.closest("[data-log]");if(lg){showTab("log");$("lSpot").value=lg.dataset.log;$("lKeep").focus();return}
   const go=e.target.closest("[data-go]");if(go){selectSite(go.dataset.go,go.dataset.at?Math.floor(+go.dataset.at/H)*H:undefined);window.scrollTo(0,0);return}
   const rm=e.target.closest("[data-rmspot]");if(rm){custom=custom.filter(s=>s.id!==rm.dataset.rmspot);store.set("custom",custom);favs.delete(rm.dataset.rmspot);store.set("favs",[...favs]);if(current===rm.dataset.rmspot)current=SITES[0].id;renderPicker();renderSpots();fillSpotSelect();return}
 });
@@ -783,41 +748,10 @@ function renderSpots(){
   $("spotForm").addEventListener("submit",e=>{e.preventDefault();const lat=parseFloat($("sLat").value),lon=parseFloat($("sLon").value);
     if(!(lat>32&&lat<43&&lon<-116&&lon>-126)){toast("That doesn't look like the California coast. Check the numbers.");return}
     const ex=+$("sKind").value,s={id:"c"+Date.now(),name:$("sName").value.trim(),short:$("sName").value.trim(),lat,lon,exposure:ex,fresh:ex<.5?.4:0,current:1,gear:ex===1?["snare"]:["snare","hoop"],kind:"Your spot",custom:true};
-    custom.push(s);store.set("custom",custom);favs.add(s.id);store.set("favs",[...favs]);fillSpotSelect();toast("Spot added. Loading its forecast…");selectSite(s.id)});
+    custom.push(s);store.set("custom",custom);favs.add(s.id);store.set("favs",[...favs]);toast("Spot added. Loading its forecast…");selectSite(s.id)});
   $("sHere").addEventListener("click",()=>{if(!navigator.geolocation){toast("Location isn't available on this device.");return}navigator.geolocation.getCurrentPosition(p=>{$("sLat").value=p.coords.latitude.toFixed(4);$("sLon").value=p.coords.longitude.toFixed(4)},()=>toast("Couldn't get your location. Type it in instead."))});
 }
 
-/* ============================== LOG ============================== */
-function fillSpotSelect(){const v=$("lSpot").value||current;$("lSpot").innerHTML=allSites().slice().sort((a,b)=>favs.has(b.id)-favs.has(a.id)).map(s=>'<option value="'+s.id+'">'+esc(s.name)+"</option>").join("")+'<option value="other">Somewhere else</option>';$("lSpot").value=v}
-function setWhenNow(){const n=pacNow(),d=new Date(n);$("lWhen").value=d.getUTCFullYear()+"-"+p2(d.getUTCMonth()+1)+"-"+p2(d.getUTCDate())+"T"+p2(d.getUTCHours())+":"+p2(d.getUTCMinutes())}
-$("logForm").addEventListener("submit",e=>{e.preventDefault();
-  const t=parseT($("lWhen").value),site=siteById($("lSpot").value);
-  const en={id:Date.now(),t,spot:$("lSpot").value,spotName:site?site.name:"Somewhere else",gear:$("lGear").value,keep:+$("lKeep").value||0,rel:+$("lRel").value||0,big:parseFloat($("lBig").value)||null,bait:$("lBait").value.trim(),hrs:parseFloat($("lHrs").value)||null,notes:$("lNotes").value.trim()};
-  if(site&&DATA.loadedAt){const c=cond(site,t);if(c.tide&&c.w.wind!=null)en.snap={score:c.score,stage:c.tide.stage,tide:+c.tide.h.toFixed(1),wave:c.wave==null?null:+c.wave.toFixed(1),wind:Math.round(c.w.wind),wdir:compass(c.w.wdir),sst:c.s.sst==null?null:Math.round(c.s.sst),moon:moon(t).name}}
-  log.unshift(en);log.sort((a,b)=>b.t-a.t);store.set("log",log);
-  ["lBig","lBait","lHrs","lNotes"].forEach(i=>$(i).value="");$("lKeep").value=0;$("lRel").value=0;setWhenNow();renderLog();toast(en.keep?"Logged. "+en.keep+" keeper"+(en.keep>1?"s":"")+", nice work.":"Logged. Skunked days count too.")});
-function renderLog(){
-  const trips=log.length,keep=log.reduce((a,e)=>a+e.keep,0),big=Math.max(0,...log.map(e=>e.big||0));
-  const by={};log.forEach(e=>{(by[e.spotName]=by[e.spotName]||{n:0,k:0});by[e.spotName].n++;by[e.spotName].k+=e.keep});
-  const bestSpot=Object.entries(by).sort((a,b)=>b[1].k/b[1].n-a[1].k/a[1].n)[0];
-  $("logStats").innerHTML=[["Trips",trips],["Keepers",keep],["Per trip",trips?(keep/trips).toFixed(1):"–"],["Biggest",big?big+'<small>"</small>':"–"]].map(x=>'<div class="inst"><div class="lbl">'+x[0]+'</div><div class="v">'+x[1]+"</div></div>").join("");
-  const pat=$("logPatterns");
-  if(trips>=3){const stage={};log.forEach(e=>{if(!e.snap)return;const k=e.snap.stage.replace(/^(Early|Mid|Late) /,"").replace(/^./,m=>m.toUpperCase());(stage[k]=stage[k]||{n:0,k:0});stage[k].n++;stage[k].k+=e.keep});
-    const tbl=(o,h)=>'<table class="t"><tr><th>'+h+"</th><th>Trips</th><th>Keepers</th><th>Per trip</th></tr>"+Object.entries(o).sort((a,b)=>b[1].k/b[1].n-a[1].k/a[1].n).map(([k,v])=>"<tr><td>"+esc(k)+"</td><td>"+v.n+"</td><td>"+v.k+"</td><td>"+(v.k/v.n).toFixed(1)+"</td></tr>").join("")+"</table>";
-    pat.hidden=false;pat.innerHTML="<h2>What's been working</h2>"+tbl(by,"Spot")+(Object.keys(stage).length?'<div style="height:14px"></div>'+tbl(stage,"Tide stage"):"")+(bestSpot?'<p class="fine" style="margin-top:8px">Best average so far: '+esc(bestSpot[0])+".</p>":"")}
-  else pat.hidden=true;
-  $("logList").innerHTML=log.length?log.map(e=>'<div class="entry"><div class="k">'+e.keep+"<small>KEEPERS</small></div><div><b>"+esc(e.spotName)+"</b> · "+fmtDate(e.t)+", "+new Date(e.t).getUTCFullYear()+" "+fmtTime(e.t)+'<div class="n">'+esc(e.gear)+(e.rel?" · "+e.rel+" thrown back":"")+(e.big?" · biggest "+e.big+'"':"")+(e.bait?" · "+esc(e.bait):"")+(e.hrs?" · "+e.hrs+" hr":"")+"</div>"+(e.snap?'<div class="n">Score '+e.snap.score+" · "+esc(e.snap.stage)+" ("+e.snap.tide+" ft)"+(e.snap.wave!=null?" · swell "+e.snap.wave+" ft":"")+" · wind "+e.snap.wdir+" "+e.snap.wind+" mph</div>":"")+(e.notes?"<div>"+esc(e.notes)+"</div>":"")+'</div><button class="del" type="button" data-del="'+e.id+'">Delete</button></div>').join(""):'<p class="empty">No trips logged yet. After the next outing, record what came up, even if it was nothing. A few entries in, this page starts showing which spots and tides work best.</p>';
-}
-let delArm=null;
-$("logList").addEventListener("click",e=>{const b=e.target.closest("[data-del]");if(!b)return;
-  if(delArm!==b.dataset.del){delArm=b.dataset.del;b.textContent="Tap again to delete";return}
-  log=log.filter(x=>String(x.id)!==delArm);delArm=null;store.set("log",log);renderLog()});
-function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
-$("expCsv").addEventListener("click",()=>{const q=v=>'"'+String(nz(v,"")).replace(/"/g,'""')+'"';
-  download("crab-log.csv",["Date,Time,Spot,Gear,Keepers,Thrown back,Biggest (in),Bait,Hours,Score,Tide stage,Tide (ft),Swell (ft),Wind (mph),Wind dir,Water (F),Moon,Notes"].concat(log.map(e=>{const s=e.snap||{},d=new Date(e.t);return[d.toISOString().slice(0,10),fmtTime(e.t),e.spotName,e.gear,e.keep,e.rel,e.big,e.bait,e.hrs,s.score,s.stage,s.tide,s.wave,s.wind,s.wdir,s.sst,s.moon,e.notes].map(q).join(",")})).join("\n"),"text/csv")});
-$("expJson").addEventListener("click",()=>download("crab-report-backup.json",JSON.stringify({log,favs:[...favs],custom}),"application/json"));
-$("impJson").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.log))throw 0;const ids=new Set(log.map(x=>x.id));j.log.forEach(x=>{if(!ids.has(x.id))log.push(x)});log.sort((a,b)=>b.t-a.t);store.set("log",log);
-  (j.custom||[]).forEach(c=>{if(!siteById(c.id))custom.push(c)});store.set("custom",custom);(j.favs||[]).forEach(x=>favs.add(x));store.set("favs",[...favs]);renderLog();renderPicker();fillSpotSelect();toast("Backup restored.")}catch(x){toast("That file isn't a Crab Report backup.")}};r.readAsText(f);e.target.value=""});
 
 /* ============================== RULES ============================== */
 function renderRules(){
@@ -992,10 +926,10 @@ function drawCrab(x,y,ph,hiding,day){
 }
 
 /* ============================== TABS / BOOT ============================== */
-function showTab(name){["today","spots","log","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
+function showTab(name){["today","spots","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
   curTab=name;$("picker").hidden=name!=="today"&&name!=="spots";renderPicker();
-  if(name==="spots")renderSpots();if(name==="log"){fillSpotSelect();renderLog()}if(name==="rules")renderRules()}
+  if(name==="spots")renderSpots();if(name==="rules")renderRules()}
 document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){showTab(b.dataset.tab);window.scrollTo(0,0)}});
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 let animStarted=false;
@@ -1014,7 +948,7 @@ $("compass").addEventListener("click",()=>{const b=$("compass");if(b.classList.c
   const t0=Date.now();boot().then(ok=>{setTimeout(()=>{b.classList.remove("spin");toast(ok?"Forecast reloaded":"Couldn't reach the forecast right now")},Math.max(0,700-(Date.now()-t0)))})});
 document.addEventListener("click",e=>{if(e.target.closest("[data-retry]")){setStatus("fair","<span>Trying again…</span>");boot()}});
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
-renderPicker();fillSpotSelect();setWhenNow();renderLog();boot();
+renderPicker();boot();
 setInterval(()=>{if(!document.hidden&&DATA.loadedAt&&$("tab-today").hidden===false)renderToday()},5*6e4);
 setInterval(()=>{if(selT==null&&DATA.loadedAt&&!$("viewing").hidden)$("viewTxt").textContent="Right now, "+fmtTime(pacNow())},30000);
 let hiddenAt=0;
