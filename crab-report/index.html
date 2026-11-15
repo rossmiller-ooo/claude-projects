@@ -7,6 +7,8 @@
 <meta name="description" content="Shore crabbing forecast and spot guide for the Northern California coast.">
 <meta name="theme-color" content="#12304a">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Crab Report">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -42,7 +44,7 @@
   --deep:#06121c; --deep-ink:#e1ecf1; color-scheme:dark;
 }}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;background:var(--deep)}
 body{margin:0;background:var(--water);color:var(--ink);font:17px/1.45 var(--f-body);
   padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 [hidden]{display:none!important}
@@ -58,6 +60,8 @@ button,select,input,textarea{font:inherit;color:inherit}
 
 /* masthead */
 .mast{background:var(--deep);color:var(--deep-ink);padding-top:env(safe-area-inset-top,0px)}
+/* solid navy behind the phone's status bar, so nothing fades over the title in home-screen mode */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--deep);z-index:30}
 .mast .wrap{display:flex;align-items:center;gap:12px;padding-block:12px}
 .mast svg{flex:none}
 .compass{all:unset;cursor:pointer;flex:none;display:flex;border-radius:50%;-webkit-tap-highlight-color:transparent}
