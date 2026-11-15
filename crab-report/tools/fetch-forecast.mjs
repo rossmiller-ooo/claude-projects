@@ -1,5 +1,5 @@
 // Fetches the forecast for every built-in spot and writes data/forecast.json.
-// Run once a day by .github/workflows/crab-forecast.yml so the app never calls the
+// Run twice a day by .github/workflows/crab-forecast.yml so the app never calls the
 // weather services from people's phones. Usage: node crab-report/tools/fetch-forecast.mjs
 import fs from "node:fs";
 import vm from "node:vm";
