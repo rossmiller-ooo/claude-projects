@@ -74,6 +74,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 .picker::-webkit-scrollbar{display:none}
 .opts{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 16px}
 .opts .chip{padding:8px 13px;font-size:.95rem}
+.opts .chip.mid{background:var(--line)}
 .opts .chip small{font-weight:500;opacity:.75;margin-left:4px}
 .find-go{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .find-go .btn.primary{padding:12px 22px;font-size:1.05rem}
@@ -277,7 +278,8 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
         <button class="chip" type="button" data-v="morning">Morning<small>5–10 am</small></button><button class="chip" type="button" data-v="midday">Midday<small>10 am–3 pm</small></button><button class="chip" type="button" data-v="evening">Evening<small>3–8 pm</small></button><button class="chip" type="button" data-v="night">Night<small>after 8 pm</small></button></div>
       <div class="lbl" id="fDays">Days</div>
       <div class="opts" data-group="days" role="group" aria-labelledby="fDays">
-        <button class="chip" type="button" data-v="any">Any day</button><button class="chip" type="button" data-v="weekend">Weekends</button><button class="chip" type="button" data-v="weekday">Weekdays</button></div>
+        <button class="chip" type="button" data-v="any">Any day</button><button class="chip" type="button" data-v="weekend">Weekends</button><button class="chip" type="button" data-v="weekday">Weekdays</button><button class="chip" type="button" data-v="custom">Custom</button></div>
+      <div id="fRangeBox" hidden style="margin:-8px 0 16px"><p class="fine" id="fRangeHint" style="margin-bottom:6px"></p><div class="opts" id="fRange" style="margin:0" role="group" aria-label="Choose dates"></div></div>
       <div class="lbl" id="fCond">Conditions</div>
       <div class="opts" data-group="cond" data-multi role="group" aria-labelledby="fCond">
         <button class="chip" type="button" data-v="wind">Light wind</button><button class="chip" type="button" data-v="calm">Calm water</button><button class="chip" type="button" data-v="slack">Slack tide</button><button class="chip" type="button" data-v="dry">No rain</button><button class="chip" type="button" data-v="good">Good score or better</button></div>
@@ -785,13 +787,24 @@ function renderSpots(){
 
 /* ============================== FIND A TIME ============================== */
 /* Simple preference chips, then a search of every hour in the forecast across the chosen spots. */
-const FIND_DEF={tod:[],days:"any",cond:[],gear:"any",spots:"fav"};
+const FIND_DEF={tod:[],days:"any",from:null,to:null,cond:[],gear:"any",spots:"fav"};
 let findPrefs=Object.assign(JSON.parse(JSON.stringify(FIND_DEF)),store.get("find",{}));
 const TOD={morning:h=>h>=5&&h<10,midday:h=>h>=10&&h<15,evening:h=>h>=15&&h<20,night:h=>h>=20||h<5};
 const FIND_LBL={wind:"Light wind",calm:"Calm water",slack:"Slack tide",dry:"No rain",good:"Good score or better"};
 function syncFind(){document.querySelectorAll("#tab-find .opts").forEach(g=>{const k=g.dataset.group,v=findPrefs[k];
-  g.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",g.hasAttribute("data-multi")?v.includes(b.dataset.v):v===b.dataset.v))})}
-$("tab-find").addEventListener("click",e=>{const b=e.target.closest(".opts button");if(!b)return;const g=b.parentElement,k=g.dataset.group;
+  g.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",g.hasAttribute("data-multi")?v.includes(b.dataset.v):v===b.dataset.v))});
+  // custom dates: a strip of the next ten days; tap the first day, then the last
+  const P=findPrefs,d0=Math.floor(pacNow()/864e5)*864e5,dN=d0+9*864e5;
+  if(P.from!=null&&(P.to<d0||P.from>dN)){P.from=P.to=null}else if(P.from!=null){P.from=Math.max(P.from,d0);P.to=Math.min(P.to,dN)}
+  $("fRangeBox").hidden=P.days!=="custom";let h="";
+  for(let d=d0;d<=dN;d+=864e5){const on=P.from!=null&&d>=P.from&&d<=P.to,end=on&&(d===P.from||d===P.to);
+    h+='<button class="chip'+(on&&!end?" mid":"")+'" type="button" data-day="'+d+'" aria-pressed="'+end+'">'+(d===d0?"Today":DOW[new Date(d).getUTCDay()]+" "+new Date(d).getUTCDate())+"</button>"}
+  $("fRange").innerHTML=h;
+  $("fRangeHint").textContent=P.from==null?"Tap the first day you can go, then the last.":P.from===P.to?fmtDate(P.from)+" only. Tap another day to make it a range.":fmtDate(P.from)+" through "+fmtDate(P.to)+"."}
+$("fRange").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(!b)return;const d=+b.dataset.day,P=findPrefs;
+  if(P.from==null||P.from!==P.to||d===P.from){P.from=P.to=d}else{P.to=Math.max(P.from,d);P.from=Math.min(P.from,d)}
+  store.set("find",P);syncFind()});
+$("tab-find").addEventListener("click",e=>{const b=e.target.closest(".opts button");if(!b)return;const g=b.parentElement,k=g.dataset.group;if(!k)return;
   if(g.hasAttribute("data-multi")){const a=findPrefs[k],i=a.indexOf(b.dataset.v);i<0?a.push(b.dataset.v):a.splice(i,1)}else findPrefs[k]=b.dataset.v;
   store.set("find",findPrefs);syncFind()});
 function findSearch(P){
@@ -803,7 +816,7 @@ function findSearch(P){
         ok=c.score>=(P.cond.includes("good")?65:45)
           &&(P.tod.length?P.tod.some(x=>TOD[x](h)):h>=5&&h<=21)
           &&!(site.dayOnly&&c.day<.5)
-          &&(P.days==="any"||(P.days==="weekend")===we)
+          &&(P.days==="any"||(P.days==="custom"?(P.from==null||(t>=P.from&&t<P.to+864e5)):(P.days==="weekend")===we))
           &&(!P.cond.includes("wind")||(c.windEff!=null&&c.windEff<10))
           &&(!P.cond.includes("calm")||(c.eff!=null&&c.eff<3))
           &&(!P.cond.includes("slack")||c.tide.toSlack<=1)
@@ -825,7 +838,7 @@ function runFind(){
   if(!res.top.length){
     // say which single choice is in the way
     const tries=[];P.cond.forEach(c=>tries.push([FIND_LBL[c],Object.assign({},P,{cond:P.cond.filter(x=>x!==c)})]));
-    if(P.tod.length)tries.push(["the time of day",Object.assign({},P,{tod:[]})]);if(P.days!=="any")tries.push(["the "+P.days+" limit",Object.assign({},P,{days:"any"})]);
+    if(P.tod.length)tries.push(["the time of day",Object.assign({},P,{tod:[]})]);if(P.days!=="any")tries.push([P.days==="custom"?"the custom dates":"the "+P.days+" limit",Object.assign({},P,{days:"any"})]);
     if(P.gear!=="any")tries.push(["the gear choice",Object.assign({},P,{gear:"any"})]);if(P.spots==="fav")tries.push(["favorites only (search All spots)",Object.assign({},P,{spots:"all"})]);
     const hints=tries.map(([l,q])=>[l,findSearch(q).total]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,2);
     el.innerHTML='<div class="alert fair"><div><b>Nothing matches in the next ten days.</b> <span>'+(hints.length?"Dropping "+hints.map(h=>"<b style=\"font:inherit;font-weight:700;text-transform:none;letter-spacing:0\">"+esc(h[0])+"</b> would turn up "+h[1]+(h[1]===1?" time":" times")).join(", or dropping ")+".":"Conditions are rough across the board. Try fewer choices.")+"</span></div></div>";return}
