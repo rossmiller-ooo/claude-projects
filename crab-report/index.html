@@ -215,7 +215,12 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .fav{background:linear-gradient(0deg,var(--card),var(--card)) padding-box;border-color:var(--land-ink);box-shadow:inset 6px 0 0 var(--land)}
 .linkbtn{all:unset;cursor:pointer;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
 .linkbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.mapprev{position:relative;height:clamp(200px,36vw,260px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--water);isolation:isolate}
+.modefab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px) + 12px);z-index:18;display:flex;gap:2px;background:var(--card);border:1.5px solid var(--ink);border-radius:999px;padding:3px;box-shadow:0 4px 12px rgba(0,0,0,.28)}
+.modefab button{all:unset;cursor:pointer;padding:8px 14px;border-radius:999px;font-weight:600;font-size:.92rem;color:var(--ink);white-space:nowrap}
+.modefab button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.modefab button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+#tab-spots{padding-bottom:84px}
+.mapprev{position:relative;height:clamp(250px,42vw,320px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--water);isolation:isolate}
 .mapprev #prevMap{position:absolute;inset:0;pointer-events:none;z-index:0}
 .mapprev-lbl{position:absolute;left:10px;bottom:10px;z-index:1;background:var(--deep);color:var(--deep-ink);border-radius:999px;padding:8px 14px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .mapprev:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -302,7 +307,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
   </section>
 
   <section id="tab-spots" hidden>
-    <div class="opts" id="mapMode" role="group" aria-label="Scores to show" style="margin:0"><button class="chip" type="button" data-m="best" aria-pressed="true">Best in next 36 hrs</button><button class="chip" type="button" data-m="now" aria-pressed="false">Right now</button></div>
+    <div class="modefab" id="mapMode" role="group" aria-label="Scores to show"><button type="button" data-m="best" aria-pressed="true">Best 36 hrs</button><button type="button" data-m="now" aria-pressed="false">Right now</button></div>
     <div class="mapprev" id="mapPrev" role="button" tabindex="0" aria-label="Open the map view"><div id="prevMap"></div><span class="mapprev-lbl">Map view <span aria-hidden="true">›</span></span></div>
     <div id="mapBar" hidden style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn primary" type="button" id="mapToggle"><span aria-hidden="true">‹</span> List view</button><button class="btn" type="button" id="mapZoom">Whole coast</button></div>
     <div id="spotsMapBox" hidden><div id="spotsMap" role="application" aria-label="Map of crabbing spots with their best scores"></div><p class="fine" id="mapNote" style="margin-top:6px"></p></div>
