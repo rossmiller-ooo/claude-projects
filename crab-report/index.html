@@ -221,6 +221,7 @@ ul.tips{margin:6px 0 0;padding-left:20px} ul.tips li{margin:4px 0}
 .mk span{font:600 .8rem/1.15 var(--f-body);color:#12304a;background:rgba(255,255,255,.88);border-radius:4px;padding:1px 5px;margin-top:2px}
 .mk span{display:none}
 .mk.favm span,.names .mk span{display:block}
+#prevMap .mk span{display:block}
 .mk::after{content:"";width:2px;height:7px;background:#12304a}
 .leaflet-popup-content{font:15px/1.4 var(--f-body);color:#12304a;margin:12px 14px}
 .leaflet-popup-content h3{font-size:1.05rem;margin:0 0 2px}
@@ -844,7 +845,7 @@ async function drawPrev(){
   if(!prev){prev=L.map("prevMap",{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,zoomSnap:.25});
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"&copy; OpenStreetMap"}).addTo(prev);prev.attributionControl.setPrefix(false);prevLayer=L.layerGroup().addTo(prev)}
   prev.invalidateSize();prev.fitBounds([[38.222,-123.075],[38.335,-122.945]],{paddingTopLeft:[10,46],paddingBottomRight:[10,6]});
-  prevLayer.clearLayers();const now=pacNow();const fr=spotRows.filter(r=>favs.has(r.s.id));(fr.length?fr:spotRows).forEach(r=>spotMarker(r,"best",now,false).addTo(prevLayer));
+  prevLayer.clearLayers();const now=pacNow();spotRows.filter(r=>r.s.id==="lawsons"||r.s.id==="doran").forEach(r=>spotMarker(r,"best",now,false).addTo(prevLayer));
 }
 function drawMap(){
   $("mapNote").textContent=(mapMode==="now"?"Each marker shows that spot's score right now.":"Each marker shows that spot's best score in the next 36 hours.")+" Tap one for details. Zoom in to see every spot's name.";
