@@ -72,6 +72,12 @@ button,select,input,textarea{font:inherit;color:inherit}
 /* spot picker */
 .picker{display:flex;gap:8px;overflow-x:auto;padding-block:12px;scrollbar-width:none}
 .picker::-webkit-scrollbar{display:none}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 16px}
+.opts .chip{padding:8px 13px;font-size:.95rem}
+.opts .chip small{font-weight:500;opacity:.75;margin-left:4px}
+.find-go{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.find-go .btn.primary{padding:12px 22px;font-size:1.05rem}
+.win .spotname{font:600 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase;color:var(--ink2)}
 .chip{flex:none;border:1.5px solid var(--ink);background:var(--card);border-radius:999px;padding:9px 15px;font-weight:600;cursor:pointer;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--card)}
 .chip.more{border-style:dashed;color:var(--ink2);border-color:var(--ink2)}
@@ -203,7 +209,7 @@ textarea{min-height:70px;resize:vertical}
 
 /* tab bar */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--deep);z-index:20;padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs div{max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs div{max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 nav.tabs button{all:unset;cursor:pointer;text-align:center;color:var(--deep-ink);opacity:.65;padding:9px 0 8px;font:600 .82rem var(--f-data);letter-spacing:.09em;text-transform:uppercase}
 nav.tabs button svg{display:block;margin:0 auto 3px}
 nav.tabs button[aria-selected="true"]{opacity:1;box-shadow:inset 0 3px 0 var(--land)}
@@ -251,7 +257,7 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
         <div class="legend"><span><i style="background:var(--ink)"></i>Tide height (ft, MLLW)</span><span><i style="background:var(--good-bg);border:1px solid var(--good)"></i>Good crabbing window</span><span><i style="background:var(--line)"></i>Night</span></div>
       </div>
 
-      <div class="card"><h2>Best times to go <span class="lbl" style="font-size:.85rem;white-space:nowrap">(next 72 hrs)</span></h2><div class="windows" id="windows"></div>
+      <div class="card"><h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>Best times to go <span class="lbl" style="font-size:.85rem;white-space:nowrap">(next 72 hrs)</span></span><button class="btn small" type="button" data-tabgo="find">Find a time</button></h2><div class="windows" id="windows"></div>
         <div class="lbl" style="margin:14px 0 8px">Next ten days — best score each day</div><div class="days" id="days"></div><p class="fine" style="margin-top:8px">Tap a time or day to switch the whole page to that hour. Swell and wind forecasts past five days are rough guides; the tides are exact.</p></div>
 
       <div class="card"><h2>What to bring <span class="lbl" id="gearWhen" style="font-size:.85rem"></span></h2><div class="gear" id="gear"></div></div>
@@ -263,12 +269,36 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
   <section id="tab-spots" hidden></section>
 
 
+  <section id="tab-find" hidden>
+    <div class="card"><h2>Find a time</h2>
+      <p class="fine" style="margin-bottom:14px">Pick what matters to you. Leave a row empty if you don't mind.</p>
+      <div class="lbl" id="fTod">Time of day</div>
+      <div class="opts" data-group="tod" data-multi role="group" aria-labelledby="fTod">
+        <button class="chip" type="button" data-v="morning">Morning<small>5–10 am</small></button><button class="chip" type="button" data-v="midday">Midday<small>10 am–3 pm</small></button><button class="chip" type="button" data-v="evening">Evening<small>3–8 pm</small></button><button class="chip" type="button" data-v="night">Night<small>after 8 pm</small></button></div>
+      <div class="lbl" id="fDays">Days</div>
+      <div class="opts" data-group="days" role="group" aria-labelledby="fDays">
+        <button class="chip" type="button" data-v="any">Any day</button><button class="chip" type="button" data-v="weekend">Weekends</button><button class="chip" type="button" data-v="weekday">Weekdays</button></div>
+      <div class="lbl" id="fCond">Conditions</div>
+      <div class="opts" data-group="cond" data-multi role="group" aria-labelledby="fCond">
+        <button class="chip" type="button" data-v="wind">Light wind</button><button class="chip" type="button" data-v="calm">Calm water</button><button class="chip" type="button" data-v="slack">Slack tide</button><button class="chip" type="button" data-v="dry">No rain</button><button class="chip" type="button" data-v="good">Good score or better</button></div>
+      <div class="lbl" id="fGear">Gear</div>
+      <div class="opts" data-group="gear" role="group" aria-labelledby="fGear">
+        <button class="chip" type="button" data-v="any">Either</button><button class="chip" type="button" data-v="snare">Rod &amp; snare</button><button class="chip" type="button" data-v="hoop">Hoop nets</button></div>
+      <div class="lbl" id="fSpots">Where</div>
+      <div class="opts" data-group="spots" role="group" aria-labelledby="fSpots">
+        <button class="chip" type="button" data-v="fav">My favorites</button><button class="chip" type="button" data-v="all">All spots</button></div>
+      <div class="find-go"><button class="btn primary" type="button" id="findGo">Find times</button><button class="btn small" type="button" id="findClear">Clear choices</button></div>
+    </div>
+    <div id="findOut" style="display:flex;flex-direction:column;gap:8px"></div>
+  </section>
+
   <section id="tab-rules" hidden></section>
 </main>
 
 <nav class="tabs" aria-label="Sections"><div role="tablist">
   <button role="tab" data-tab="today" aria-selected="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 21c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/><circle cx="12" cy="7" r="3.5"/></svg>Today</button>
   <button role="tab" data-tab="spots" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7 7-12a7 7 0 10-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>Spots</button>
+  <button role="tab" data-tab="find" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M11 7v4l2.5 2M16.5 16.5L21 21"/></svg>Find</button>
   <button role="tab" data-tab="rules" aria-selected="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 7v10h16V7M8 7v4M12 7v6M16 7v4"/></svg>Rules</button>
 </div></nav>
 <div class="toast" id="toast" hidden></div>
@@ -753,6 +783,60 @@ function renderSpots(){
 }
 
 
+/* ============================== FIND A TIME ============================== */
+/* Simple preference chips, then a search of every hour in the forecast across the chosen spots. */
+const FIND_DEF={tod:[],days:"any",cond:[],gear:"any",spots:"fav"};
+let findPrefs=Object.assign(JSON.parse(JSON.stringify(FIND_DEF)),store.get("find",{}));
+const TOD={morning:h=>h>=5&&h<10,midday:h=>h>=10&&h<15,evening:h=>h>=15&&h<20,night:h=>h>=20||h<5};
+const FIND_LBL={wind:"Light wind",calm:"Calm water",slack:"Slack tide",dry:"No rain",good:"Good score or better"};
+function syncFind(){document.querySelectorAll("#tab-find .opts").forEach(g=>{const k=g.dataset.group,v=findPrefs[k];
+  g.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",g.hasAttribute("data-multi")?v.includes(b.dataset.v):v===b.dataset.v))})}
+$("tab-find").addEventListener("click",e=>{const b=e.target.closest(".opts button");if(!b)return;const g=b.parentElement,k=g.dataset.group;
+  if(g.hasAttribute("data-multi")){const a=findPrefs[k],i=a.indexOf(b.dataset.v);i<0?a.push(b.dataset.v):a.splice(i,1)}else findPrefs[k]=b.dataset.v;
+  store.set("find",findPrefs);syncFind()});
+function findSearch(P){
+  const now=pacNow(),base=Math.floor(now/H)*H,out=[];
+  const sites=allSites().filter(s=>hasData(s)&&!s.advisory&&(P.spots==="all"||favs.has(s.id))&&(P.gear==="any"||s.gear.includes(P.gear)));
+  sites.forEach(site=>{const mx=maxAhead(site,base);let run=null;
+    for(let k=0;k<=mx+1;k++){const t=base+k*H,c=k<=mx?cond(site,t):null;let ok=false;
+      if(c&&c.tide&&c.season.open){const h=new Date(t).getUTCHours(),dow=new Date(t).getUTCDay(),we=dow===0||dow===6;
+        ok=c.score>=(P.cond.includes("good")?65:45)
+          &&(P.tod.length?P.tod.some(x=>TOD[x](h)):h>=5&&h<=21)
+          &&!(site.dayOnly&&c.day<.5)
+          &&(P.days==="any"||(P.days==="weekend")===we)
+          &&(!P.cond.includes("wind")||(c.windEff!=null&&c.windEff<10))
+          &&(!P.cond.includes("calm")||(c.eff!=null&&c.eff<3))
+          &&(!P.cond.includes("slack")||c.tide.toSlack<=1)
+          &&(!P.cond.includes("dry")||((c.w.rain||0)<.01&&(c.w.pop==null||c.w.pop<40)))
+          &&(P.gear!=="hoop"||Math.abs(c.tide.rate)*(site.current||1)<=1.1)
+          &&(P.gear!=="snare"||c.eff==null||c.eff<6)}
+      if(ok){if(!run)run={site,from:t,to:t+H,best:c};else{run.to=t+H;if(c.score>run.best.score)run.best=c}}
+      else if(run){out.push(run);run=null}}});
+  // best first; at most one result per spot per day so the list stays varied
+  out.sort((a,b)=>b.best.score-a.best.score||a.from-b.from);
+  const seen=new Set(),top=[];
+  for(const r of out){const key=r.site.id+"|"+Math.floor(r.best.t/864e5);if(seen.has(key))continue;seen.add(key);top.push(r);if(top.length>=8)break}
+  return{top,total:out.length,sites};
+}
+function runFind(){
+  const P=findPrefs,now=pacNow(),res=findSearch(P),el=$("findOut");
+  if(!DATA.loadedAt){el.innerHTML='<p class="empty">The forecast is still loading. Try again in a moment.</p>';return}
+  if(!res.sites.length){el.innerHTML='<div class="alert fair"><div><b>No spots to search.</b> <span>'+(P.gear!=="any"&&P.spots==="fav"?"None of your favorites suit that gear. Try All spots.":"Star a favorite on the Spots tab, or choose All spots.")+"</span></div></div>";return}
+  if(!res.top.length){
+    // say which single choice is in the way
+    const tries=[];P.cond.forEach(c=>tries.push([FIND_LBL[c],Object.assign({},P,{cond:P.cond.filter(x=>x!==c)})]));
+    if(P.tod.length)tries.push(["the time of day",Object.assign({},P,{tod:[]})]);if(P.days!=="any")tries.push(["the "+P.days+" limit",Object.assign({},P,{days:"any"})]);
+    if(P.gear!=="any")tries.push(["the gear choice",Object.assign({},P,{gear:"any"})]);if(P.spots==="fav")tries.push(["favorites only (search All spots)",Object.assign({},P,{spots:"all"})]);
+    const hints=tries.map(([l,q])=>[l,findSearch(q).total]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,2);
+    el.innerHTML='<div class="alert fair"><div><b>Nothing matches in the next ten days.</b> <span>'+(hints.length?"Dropping "+hints.map(h=>"<b style=\"font:inherit;font-weight:700;text-transform:none;letter-spacing:0\">"+esc(h[0])+"</b> would turn up "+h[1]+(h[1]===1?" time":" times")).join(", or dropping ")+".":"Conditions are rough across the board. Try fewer choices.")+"</span></div></div>";return}
+  el.innerHTML='<div class="lbl" style="margin-top:4px">Best '+res.top.length+(res.top.length===1?" match":" matches")+" · "+res.sites.length+(res.sites.length===1?" spot":" spots")+" · tap one for the full report</div>"+res.top.map(r=>{const c=r.best,g=grade(c.score),td=c.tide;
+    return'<button type="button" class="win" style="background:var(--card)" data-go="'+r.site.id+'" data-at="'+c.t+'"><div class="sc b-'+g.c+'">'+c.score+'</div><div><div class="spotname">'+esc(r.site.short||r.site.name)+'</div><div class="t">'+dayLong(r.from,now).replace(/^t/,m=>m.toUpperCase())+", "+fmtTime(r.from)+" – "+fmtTime(r.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" · swell "+(c.eff==null?"–":c.eff.toFixed(0)+" ft here")+" · wind "+(c.w.wind==null?"–":Math.round(c.w.wind)+" mph")+((c.w.rain||0)>=.01?" · rain":"")+'</div></div><span class="chev" aria-hidden="true">›</span></button>'}).join("")
+    +'<p class="fine">Scores of 45 and up only'+(P.tod.length?"":", between 5 am and 10 pm")+". Swell and wind past five days are rough guides.</p>";
+}
+$("findGo").addEventListener("click",()=>{runFind();const o=$("findOut");if(o.firstElementChild)o.firstElementChild.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"})});
+$("findClear").addEventListener("click",()=>{findPrefs=JSON.parse(JSON.stringify(FIND_DEF));store.set("find",findPrefs);syncFind();$("findOut").innerHTML=""});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-tabgo]");if(b){showTab(b.dataset.tabgo);window.scrollTo(0,0)}});
+
 /* ============================== RULES ============================== */
 function renderRules(){
   const now=pacNow(),s=seasonInfo(SITES[0],now);
@@ -926,10 +1010,10 @@ function drawCrab(x,y,ph,hiding,day){
 }
 
 /* ============================== TABS / BOOT ============================== */
-function showTab(name){["today","spots","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
+function showTab(name){["today","spots","find","rules"].forEach(t=>{$("tab-"+t).hidden=t!==name});
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
   curTab=name;$("picker").hidden=name!=="today"&&name!=="spots";renderPicker();
-  if(name==="spots")renderSpots();if(name==="rules")renderRules()}
+  if(name==="spots")renderSpots();if(name==="find")syncFind();if(name==="rules")renderRules()}
 document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){showTab(b.dataset.tab);window.scrollTo(0,0)}});
 let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 let animStarted=false;
