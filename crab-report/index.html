@@ -74,6 +74,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 @keyframes roseSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.compass.spin .rose{animation:none;opacity:.6}}
 .mast h1{font-size:1.5rem}
+.mast .ttl{min-width:0;flex:1}
+.mast .ttl h1,.mast .ttl .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.comfort{all:unset;cursor:pointer;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 2px;border-radius:10px;-webkit-tap-highlight-color:transparent}
+.comfort .cl{font:600 .68rem/1 var(--f-data);letter-spacing:.09em;text-transform:uppercase;color:var(--deep-ink);opacity:.85}
+.comfort .sw{position:relative;width:40px;height:22px;border-radius:999px;background:rgba(255,255,255,.22);transition:background .15s}
+.comfort .sw i{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#f2f6f8;transition:left .15s,background .15s}
+.comfort[aria-checked="true"] .sw{background:#ead9a4}
+.comfort[aria-checked="true"] .sw i{left:21px;background:#12304a}
+.comfort:focus-visible{outline:3px solid #ead9a4;outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.comfort .sw,.comfort .sw i{transition:none}}
 .mast .sub{font:500 .85rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;opacity:.8}
 .alert .btn{margin-top:8px;display:flex}
 
@@ -177,7 +187,7 @@ main section{display:flex;flex-direction:column;gap:16px;padding-bottom:24px}
 .win .chev{color:var(--ink2);font-size:1.1rem}
 .win[aria-pressed="true"],button.day[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .brk{padding:2px 0 4px}
-.brk .f{display:grid;grid-template-columns:62px 1fr 46px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.93rem}
+.brk .f{display:grid;grid-template-columns:76px 1fr 50px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.93rem}
 .brk .f b{font:700 .8rem var(--f-data);letter-spacing:.07em;text-transform:uppercase}
 .brk .f .pts{text-align:right;font:600 .9rem var(--f-data);font-variant-numeric:tabular-nums;color:var(--ink2)}
 .brk .sum{font-size:.88rem;color:var(--ink2);padding-top:6px;border-top:1px solid var(--line)}
@@ -266,7 +276,8 @@ nav.tabs button:focus-visible{outline:3px solid var(--land);outline-offset:-3px}
 <body>
 <header class="mast"><div class="wrap">
   <button class="compass" id="compass" type="button" aria-label="Update the forecast" title="Update the forecast">  <svg class="rose" width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#ead9a4" stroke-width="1.5"/><circle cx="24" cy="24" r="16" fill="none" stroke="#ead9a4" stroke-width=".8" stroke-dasharray="1.2 3"/><path d="M24 2l4 18 18 4-18 4-4 18-4-18-18-4 18-4z" fill="#ead9a4"/><path d="M24 2l4 18-4 4z M46 24l-18 4-4-4z M24 46l-4-18 4-4z M2 24l18-4 4 4z" fill="#12304a" opacity=".55"/><circle cx="24" cy="24" r="2.2" fill="#c8573a"/></svg></button>
-  <div><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Fort Bragg to Monterey</div></div>
+  <div class="ttl"><h1>Rob's Crab Report</h1><div class="sub" id="mastSub">Shore crabbing · Fort Bragg to Monterey</div></div>
+  <button class="comfort" id="comfortBtn" type="button" role="switch" aria-checked="true" aria-label="Count comfort (rain, wind and cold) in every score"><span class="cl">Comfort</span><span class="sw"><i></i></span></button>
 </div></header>
 
 <main class="wrap">
@@ -616,6 +627,28 @@ const compass=d=>d==null?"":COMPASS[Math.round(d/22.5)%16];
 function sunFor(site,t){const s=(DATA.wx[site.id]||{}).sun||[];const day=Math.floor(t/864e5)*864e5;return s.find(x=>x.day===day)||s[s.length-1]||{rise:day+7*H,set:day+17*H}}
 function dayness(site,t){const s=sunFor(site,t),r=s.rise+(t-s.day>=0?0:0);const tw=.75*H;return clamp(Math.min((t-(s.rise-tw))/tw,((s.set+tw)-t)/tw))}
 function rain72(site,t){const m=(DATA.wx[site.id]||{}).h;if(!m)return 0;let sum=0;for(let k=0;k<72;k++){const x=m.get(hourKey(t-k*H));if(x)sum+=x.rain}return sum}
+/* Comfort: how pleasant it is for a person to be out there, separate from how the crabs are behaving.
+   Returns points to take off, an optional ceiling on the score, and short notes for the breakdown. */
+let comfortOn=store.get("comfort",true);
+function feelsLike(tempF,windMph){   // NWS wind chill; only defined for cool, breezy air
+  if(tempF==null)return null;if(windMph==null||tempF>50||windMph<3)return tempF;
+  const v=Math.pow(windMph,.16);return 35.74+.6215*tempF-35.75*v+.4275*tempF*v}
+function comfortOf(w,windEff){
+  let pen=0,cap=100;const notes=[],rain=w.rain||0,pop=w.pop,code=w.code,fl=feelsLike(w.temp,w.wind);
+  if(code!=null&&code>=95){cap=Math.min(cap,20);notes.push("thunderstorms")}
+  if(rain>=.02){cap=Math.min(cap,35);notes.push(rain>=.1?"heavy rain":"raining")}
+  else if(pop!=null&&pop>=60){pen+=15;notes.push("rain likely ("+pop+"%)")}
+  else if(pop!=null&&pop>=30){pen+=6;notes.push("rain possible ("+pop+"%)")}
+  if(windEff!=null){
+    if(windEff>=25){cap=Math.min(cap,35);notes.push("very windy, gusts "+Math.round(nz(w.gust,w.wind))+" mph")}
+    else if(windEff>=18){pen+=12;notes.push("windy, gusts "+Math.round(nz(w.gust,w.wind))+" mph")}
+    else if(windEff>=12){pen+=5;notes.push("breezy")}}
+  if(fl!=null){
+    if(fl<38){pen+=15;notes.push("feels like "+Math.round(fl)+"°F")}
+    else if(fl<45){pen+=8;notes.push("feels like "+Math.round(fl)+"°F")}}
+  if(code===45||code===48){pen+=5;notes.push("fog")}
+  return{pen:Math.min(pen,40),cap,notes};
+}
 function cond(site,t){
   const k=hourKey(t),w=((DATA.wx[site.id]||{}).h||new Map()).get(k)||{},s=(DATA.sea[site.id]||new Map()).get(k)||{},td=tideAt(site,t);
   const season=seasonInfo(site,t),day=dayness(site,t);
@@ -632,7 +665,8 @@ function cond(site,t){
   let score=100*(.42*pT+.28*pS+.20*pW+.10*pL);
   const runoff=clamp((r72-.5)/2.5)*(site.fresh||0);
   score-=runoff*30;
-  if((w.rain||0)>.08)score-=5;
+  const comfort=comfortOf(w,windEff);
+  if(comfortOn){score=Math.min(score-comfort.pen,comfort.cap)}
   const flags=[];
   if(eff!=null&&eff>=8){score=Math.min(score,18);flags.push("surf")}
   else if(eff!=null&&eff>=6){score=Math.min(score,38)}
@@ -642,7 +676,7 @@ function cond(site,t){
   if(site.dayOnly&&day<.5){flags.push("closed-hours")}
   if(!season.open){score=0;flags.push("season")}
   score=Math.round(clamp(score,0,100));
-  return{t,score,tide:td,w,s,wave,eff,windEff,r72,runoff,day,season,flags,parts:{pT,pS,pW,pL}};
+  return{t,score,tide:td,w,s,wave,eff,windEff,r72,runoff,day,season,flags,comfort,parts:{pT,pS,pW,pL}};
 }
 function grade(sc){return sc>=80?{w:"Prime",c:"good",n:"Drop everything and go"}:sc>=65?{w:"Good",c:"good",n:"Worth the drive"}:sc>=45?{w:"Fair",c:"fair",n:"Fishable, pick your hours"}:sc>=25?{w:"Poor",c:"bad",n:"Slim pickings"}:{w:"Stay ashore",c:"bad",n:"Not today"}}
 const part3=p=>p>=.7?"good":p>=.4?"fair":"bad";
@@ -668,12 +702,14 @@ function explain(c,site){
   if(c.wave!=null)rows.push([part3(P.pS),"Swell",c.wave.toFixed(0)+" ft outside, about "+c.eff.toFixed(0)+" ft here."+(c.eff<2.5?" Calm.":c.eff<4.5?" Some surge.":" Rough."),pts(P.pS,28)]);
   if(c.windEff!=null)rows.push([part3(P.pW),"Wind",Math.round(c.w.wind)+" mph, gusts "+Math.round(nz(c.w.gust,c.w.wind))+"."+(c.windEff<8?" Light.":c.windEff<16?" Breezy.":" Hard to cast."),pts(P.pW,20)]);
   rows.push([c.day>.5?"fair":"good","Light",c.day>.5?"Daylight. Crabs sit deeper.":"Low light. Crabs move shallow.",pts(P.pL,10)]);
-  if(c.runoff>.05)rows.push(["bad","Rain",c.r72.toFixed(1)+" in over 3 days. Fresh water in the bay.","−"+Math.round(c.runoff*30)]);
+  if(c.runoff>.05)rows.push(["bad","Runoff",c.r72.toFixed(1)+" in of rain in 3 days. Fresh water in the bay.","−"+Math.round(c.runoff*30)]);
+  if(comfortOn){const k=c.comfort;rows.push([k.cap<100?"bad":k.pen>=12?"bad":k.pen>0?"fair":"good","Comfort",k.notes.length?k.notes.join(", ").replace(/^./,m=>m.toUpperCase())+".":"Dry, mild and calm enough to enjoy.",k.cap<100?"cap "+k.cap:"−"+k.pen])}
   let cap="";
   if(!c.season.open)cap="Season closed, so the score is 0.";
   else if(c.flags.includes("surf"))cap="Surf this big is unsafe from shore. Score capped at 18.";
   else if(c.flags.includes("wind"))cap="Wind this strong caps the score at 22.";
   else if(c.eff!=null&&c.eff>=6)cap="Swell over 6 ft at the water caps the score at 38.";
+  else if(comfortOn&&c.comfort.cap<100)cap="With Comfort on, "+(c.comfort.cap<=20?"thunderstorms cap":/rain/.test(c.comfort.notes.join())?"rain caps":"wind this strong caps")+" the score at "+c.comfort.cap+".";
   return'<div class="brk">'+rows.map(r=>'<div class="f"><b class="t-'+r[0]+'">'+r[1]+"</b><span>"+r[2]+'</span><span class="pts">'+r[3]+"</span></div>").join("")+(cap?'<div class="sum">'+cap+"</div>":"")+"</div>";
 }
 function whyText(c,site){
@@ -687,6 +723,7 @@ function whyText(c,site){
   if(c.windEff!=null)bits.push(c.windEff<8?"light wind":c.windEff<16?"a steady breeze":"strong wind");
   if(c.runoff>.25)bits.push("recent rain is pushing fresh water out of the bay");
   let s=bits.join(", ");s=s.charAt(0).toUpperCase()+s.slice(1)+".";
+  if(comfortOn&&c.comfort.notes.length&&(c.comfort.cap<100||c.comfort.pen>=8))s+=" Not a comfortable time to be out: "+c.comfort.notes.join(", ")+".";
   if(c.flags.includes("closed-hours"))s+=" Note this spot is day-use only.";
   return s;
 }
@@ -868,7 +905,7 @@ let tlKey="",tlPx=4,tlFromScroll=false,tlRaf=0;
 let tlRz;window.addEventListener("resize",()=>{clearTimeout(tlRz);tlRz=setTimeout(()=>{tlKey="";if(DATA.loadedAt&&!$("tab-today").hidden)renderToday()},200)});
 function buildTimeline(site,base,mx){
   const tl=$("tl"),W=tl.clientWidth||300,px=W/72,pad=W/2,past=Math.floor(pad/px);
-  const key=site.id+"|"+base+"|"+mx+"|"+Math.round(W)+"|"+DATA.daily+"|"+DATA.loadedAt;
+  const key=site.id+"|"+base+"|"+mx+"|"+Math.round(W)+"|"+DATA.daily+"|"+DATA.loadedAt+"|"+comfortOn;
   if(key===tlKey)return;tlKey=key;tlPx=px;
   const total=pad*2+mx*px,X=k=>pad+k*px,HB=34;let s="";
   for(let d=Math.floor((base-past*H)/864e5)*864e5-864e5;d<base+(mx+24)*H;d+=864e5){const sn=sunFor(site,d+12*H),a=Math.max(sn.set,base-past*H),b2=Math.min(sunFor(site,d+36*H).rise,base+(mx+past)*H);
@@ -957,7 +994,7 @@ function renderSpots(){
   rows.sort((a,b)=>(favs.has(b.s.id)-favs.has(a.s.id))||(val(b)-val(a)));
   spotRows=rows;if(mapOn)drawMap();else drawPrev();
   let h="";
-  h+='<p class="fine">'+(nowMode?"Each score is for that spot right now.":"Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm.")+" Tap a name for the full report.</p>";
+  h+='<p class="fine">'+(nowMode?"Each score is for that spot right now.":"Each score is that spot\'s best window in the next 36 hours, between 5 am and 10 pm.")+(comfortOn?" Comfort is counted.":"")+" Tap a name for the full report.</p>";
   h+=rows.map(({s,c,w:wBest,ok})=>{const w=nowMode?null:wBest,sc=w?w.score:c?c.score:null,g=sc==null?{c:"fair",w:""}:grade(sc);
     return'<div class="card spot'+(favs.has(s.id)?" fav":"")+'"><div class="sc b-'+g.c+'">'+(sc==null?"–":sc)+"<small>"+(w?dayShort(w.t,now)+" "+fmtTime(w.t).replace(" ","").toUpperCase():"NOW")+'</small></div><div style="min-width:0"><h3><button type="button" data-go="'+s.id+'"'+(w?' data-at="'+w.t+'"':"")+'>'+esc(s.name)+'</button></h3><div class="meta">'+esc(s.kind||"Your spot")+(s.region?" · "+esc(s.region):"")+"</div>"+
       (w?'<p class="blurb"><b>Best time: '+dayLong(w.from,now)+", "+fmtTime(w.from)+" – "+fmtTime(w.to)+"</b>"+(c?" · right now "+c.score:"")+"</p>":nowMode&&c?'<p class="blurb"><b>Right now: '+grade(c.score).w+"</b>"+(wBest?" · best in 36 hrs "+wBest.score+", "+dayLong(wBest.from,now)+" "+fmtTime(wBest.from):"")+"</p>":ok?'<p class="blurb"><b>No good window in the next 36 hours</b>'+(c?" · right now "+c.score:"")+"</p>":"")+
@@ -1033,7 +1070,7 @@ function runFind(){
     el.innerHTML='<div class="alert fair"><div><b>Nothing matches in the next ten days.</b> <span>'+(hints.length?"Dropping "+hints.map(h=>"<b style=\"font:inherit;font-weight:700;text-transform:none;letter-spacing:0\">"+esc(h[0])+"</b> would turn up "+h[1]+(h[1]===1?" time":" times")).join(", or dropping ")+".":"Conditions are rough across the board. Try fewer choices.")+"</span></div></div>";return}
   el.innerHTML='<div class="lbl" style="margin-top:4px">Best '+res.top.length+(res.top.length===1?" match":" matches")+" · "+res.sites.length+(res.sites.length===1?" spot":" spots")+" · tap one for the full report</div>"+res.top.map(r=>{const c=r.best,g=grade(c.score),td=c.tide;
     return'<button type="button" class="win" style="background:var(--card)" data-go="'+r.site.id+'" data-at="'+c.t+'"><div class="sc b-'+g.c+'">'+c.score+'</div><div><div class="spotname">'+esc(r.site.short||r.site.name)+'</div><div class="t">'+dayLong(r.from,now).replace(/^t/,m=>m.toUpperCase())+", "+fmtTime(r.from)+" – "+fmtTime(r.to)+' <span class="pill b-'+g.c+'">'+g.w+'</span></div><div class="n">'+(td.near.hi?"High":"Low")+" slack "+fmtTime(td.near.t)+" · swell "+(c.eff==null?"–":c.eff.toFixed(0)+" ft here")+" · wind "+(c.w.wind==null?"–":Math.round(c.w.wind)+" mph")+((c.w.rain||0)>=.01?" · rain":"")+'</div></div><span class="chev" aria-hidden="true">›</span></button>'}).join("")
-    +'<p class="fine">Scores of 45 and up only'+(P.tod.length?"":", between 5 am and 10 pm")+". Swell and wind past five days are rough guides.</p>";
+    +'<p class="fine">Scores of 45 and up only'+(P.tod.length?"":", between 5 am and 10 pm")+(comfortOn?", with comfort counted":"")+". Swell and wind past five days are rough guides.</p>";
 }
 $("findGo").addEventListener("click",()=>{runFind();const o=$("findOut");if(o.firstElementChild)o.firstElementChild.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"})});
 $("findClear").addEventListener("click",()=>{findPrefs=JSON.parse(JSON.stringify(FIND_DEF));store.set("find",findPrefs);syncFind();$("findOut").innerHTML=""});
@@ -1045,7 +1082,7 @@ function renderRules(){
   $("tab-rules").innerHTML='<div class="alert '+(s.open?"good":"bad")+'"><div><b>'+(s.open?"Season open":"Season closed")+".</b> <span>"+(s.open?"Recreational Dungeness is open through "+s.closes+" south of the Mendocino county line (July 30 north of it).":"Reopens "+fmtDate(s.nextOpen)+".")+"</span></div></div>"+
   '<div class="card rules"><h2>The rules, short version</h2><dl>'+RULES.items.map(r=>"<dt>"+r[0]+"</dt><dd>"+r[1]+"</dd>").join("")+'</dl><p class="fine" style="margin-top:14px">'+RULES.asOf+"</p></div>"+
   '<div class="card"><h2>Check before you go</h2><div class="btns">'+RULES.links.map(l=>'<a class="btn" target="_blank" rel="noopener" href="'+l[1]+'">'+esc(l[0])+"</a>").join("")+"</div>"+(RULES.hotline?'<p class="fine" style="margin-top:10px">'+RULES.hotline+"</p>":"")+"</div>"+
-  '<div class="card"><h2>How the score works</h2><p>Each hour gets a score out of 100 for shore crabbing at that spot.</p><ul class="tips"><li><b>Tide and current (42%)</b>. Crabs feed and gear stays put around slack water. High slack and the last of the incoming score best. Big tide swings and very low water score worst.</li><li><b>Swell (28%)</b>. Ocean swell scaled to how exposed the spot is. Over about 8 ft at the water\'s edge the score is capped as unsafe.</li><li><b>Hours</b>. Suggested windows run 5 am to 10 pm, and daylight only at day-use parks.</li><li><b>Wind (20%)</b>. Sustained wind blended with gusts.</li><li><b>Light (10%)</b>. Dungeness move shallower at dusk and after dark.</li><li><b>Rain runoff</b>. Heavy rain in the last three days takes points off bay and river-mouth spots.</li></ul><p class="fine" style="margin-top:10px">Tides: NOAA predictions. Swell, wind, weather and water temperature: Open-Meteo forecast models. Hazard alerts: National Weather Service. The forecast is refreshed twice a day, early morning and mid-afternoon. Forecasts are guidance. Look at the water yourself before you set up.</p></div>';
+  '<div class="card"><h2>How the score works</h2><p>Each hour gets a score out of 100 for shore crabbing at that spot.</p><ul class="tips"><li><b>Tide and current (42%)</b>. Crabs feed and gear stays put around slack water. High slack and the last of the incoming score best. Big tide swings and very low water score worst.</li><li><b>Swell (28%)</b>. Ocean swell scaled to how exposed the spot is. Over about 8 ft at the water\'s edge the score is capped as unsafe.</li><li><b>Hours</b>. Suggested windows run 5 am to 10 pm, and daylight only at day-use parks.</li><li><b>Wind (20%)</b>. Sustained wind blended with gusts.</li><li><b>Light (10%)</b>. Dungeness move shallower at dusk and after dark.</li><li><b>Rain runoff</b>. Heavy rain in the last three days takes points off bay and river-mouth spots.</li><li><b>Comfort</b> (the switch in the header, currently '+(comfortOn?"on":"off")+'). When on, scores also count how pleasant it is to be out. Rain falling, or wind strong enough to be miserable, caps the score at 35. A good chance of rain, a stiff breeze, a feels-like temperature under 45°F and fog each take points off. Turn it off to score the crabbing alone.</li></ul><p class="fine" style="margin-top:10px">Tides: NOAA predictions. Swell, wind, weather and water temperature: Open-Meteo forecast models. Hazard alerts: National Weather Service. The forecast is refreshed twice a day, early morning and mid-afternoon. Forecasts are guidance. Look at the water yourself before you set up.</p></div>';
 }
 
 /* ============================== SCENE ANIMATION ============================== */
@@ -1221,7 +1258,7 @@ let toastT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;c
 let animStarted=false;
 let bootRun=0;
 function setStatus(cls,html,retry){$("status").hidden=false;$("status").className="alert "+cls;$("status").innerHTML="<div>"+html+(retry?'<button class="btn small" type="button" data-retry>Try again</button>':"")+"</div>"}
-function paint(){$("mastSub").textContent=fmtDate(pacNow())+" · Shore crabbing forecast";renderToday();if(!$("tab-spots").hidden)renderSpots();
+function paint(){$("mastSub").textContent=fmtDate(pacNow())+" · Crabbing forecast";renderToday();if(!$("tab-spots").hidden)renderSpots();
   if(!animStarted){animStarted=true;requestAnimationFrame(drawScene)}else if(reduce)drawScene(0)}
 async function boot(force){
   const run=++bootRun;
@@ -1233,6 +1270,12 @@ async function boot(force){
 $("compass").addEventListener("click",()=>{const b=$("compass");if(b.classList.contains("spin"))return;b.classList.add("spin");
   const t0=Date.now();checkUpdate().then(up=>up?false:boot(true)).then(ok=>{setTimeout(()=>{b.classList.remove("spin");toast(ok?"Forecast reloaded":"Couldn't reach the forecast right now")},Math.max(0,700-(Date.now()-t0)))})});
 document.addEventListener("click",e=>{if(e.target.closest("[data-retry]")){setStatus("fair","<span>Trying again…</span>");boot()}});
+function syncComfort(){$("comfortBtn").setAttribute("aria-checked",comfortOn)}
+$("comfortBtn").addEventListener("click",()=>{comfortOn=!comfortOn;store.set("comfort",comfortOn);syncComfort();
+  toast(comfortOn?"Comfort on: scores count rain, wind and cold":"Comfort off: scores are about the crabbing only");
+  if(!DATA.loadedAt)return;
+  if(!$("tab-today").hidden)renderToday();if(!$("tab-spots").hidden)renderSpots();if(!$("tab-find").hidden&&$("findOut").firstElementChild)runFind();if(!$("tab-rules").hidden)renderRules()});
+syncComfort();
 const _rt=renderToday;renderToday=function(){_rt();if(reduce&&animStarted)drawScene(0)};
 renderPicker();boot();
 setInterval(()=>{if(!document.hidden&&DATA.loadedAt&&$("tab-today").hidden===false)renderToday()},5*6e4);
